@@ -1,258 +1,401 @@
-# logic.py to be imported in the 2048.py file 
-# inspired from https://www.geeksforgeeks.org/2048-game-in-python/
+import tkinter as tk
+import tkinter.messagebox as messagebox
 
-# importing random package
-# for methods to generate random
-# numbers.
+import sys
 import random
 
-# function to initialize game / grid
-# at the start
-def start_game():
 
-    # declaring an empty list then
-    # appending 4 list each with four
-    # elements as 0.
-    mat =[]
-    for i in range(4):
-        mat.append([0] * 4)
+class Grid:
+    '''The data structure representation of the 2048 game.
+    '''
 
-    # printing controls for user
-    print("Commands are as follows : ")
-    print("'u' : Move Up")
-    print("'d' : Move Down")
-    print("'l' : Move Left")
-    print("'r' : Move Right")
+    def __init__(self, n):
+        self.size = n
+        self.cells = self.generate_empty_grid()
+        self.compressed = False
+        self.merged = False
+        self.moved = False
+        self.current_score = 0
 
-    # calling the function to add
-    # a new 2 in grid after every step
-    add_new_2(mat)
-    return mat
+    def random_cell(self):
+        cell = random.choice(self.retrieve_empty_cells())
+        i, j = cell
+        # Exponent 1 represents 2 (since 1 << 1 == 2)
+        self.cells[i][j] = 1 if random.random(
+        ) < 0.9 else 2  # Exponents 1 or 2
 
-# function to add a new 2 in
-# grid at any random empty cell
-def add_new_2(mat):
+    def retrieve_empty_cells(self):
+        empty_cells = []
+        for i in range(self.size):
+            for j in range(self.size):
+                if self.cells[i][j] == 0:
+                    empty_cells.append((i, j))
+        return empty_cells
 
-   # choosing a random index for
-   # row and column.
-    r = random.randint(0, 3)
-    c = random.randint(0, 3)
+    def generate_empty_grid(self):
+        return [[0] * self.size for i in range(self.size)]
 
-    # while loop will break as the
-    # random cell chosen will be empty
-    # (or contains zero)
-    while(mat[r][c] != 0):
-        r = random.randint(0, 3)
-        c = random.randint(0, 3)
+    def transpose(self):
+        self.cells = [list(t) for t in zip(*self.cells)]
 
-    # we will place a 2 at that empty
-    # random cell.
-    mat[r][c] = 2
+    def reverse(self):
+        for i in range(self.size):
+            start = 0
+            end = self.size - 1
+            while start < end:
+                self.cells[i][start], self.cells[i][end] = \
+                    self.cells[i][end], self.cells[i][start]
+                start += 1
+                end -= 1
 
-# function to get the current
-# state of game
-def get_current_state(mat):
+    def clear_flags(self):
+        self.compressed = False
+        self.merged = False
+        self.moved = False
 
-    # Here we assume that we want to continue to play as long as we haven't lost
-    # So we commented out the following code
+    def left_compress(self):
+        self.compressed = False
+        new_grid = self.generate_empty_grid()
+        for i in range(self.size):
+            count = 0
+            for j in range(self.size):
+                if self.cells[i][j] != 0:
+                    new_grid[i][count] = self.cells[i][j]
+                    if count != j:
+                        self.compressed = True
+                    count += 1
+        self.cells = new_grid
 
-    # # if any cell contains
-    # # 2048 we have won
-    # for i in range(4):
-    #     for j in range(4):
-    #         if(mat[i][j]== 2048):
-    #             return 'WON'
+    def left_merge(self):
+        self.merged = False
+        for i in range(self.size):
+            for j in range(self.size - 1):
+                if self.cells[i][j] == self.cells[i][j + 1] and self.cells[i][j] != 0:
+                    self.cells[i][j] += 1  # Increment exponent
+                    self.cells[i][j + 1] = 0
+                    # Update score: 1 shifted left by the new exponent
+                    self.current_score += 1 << self.cells[i][j]
+                    self.merged = True
 
-    # if we are still left with
-    # atleast one empty cell
-    # game is not yet over
-    for i in range(4):
-        for j in range(4):
-            if(mat[i][j]== 0):
-                return 'GAME NOT OVER'
+    def found_2048(self):
+        for i in range(self.size):
+            for j in range(self.size):
+                # Exponent for 2048 (since 1 << 11 == 2048)
+                if self.cells[i][j] >= 11:
+                    return True
+        return False
 
-    # or if no cell is empty now
-    # but if after any move left, right,
-    # up or down, if any two cells
-    # gets merged and create an empty
-    # cell then also game is not yet over
-    for i in range(3):
-        for j in range(3):
-            if(mat[i][j]== mat[i + 1][j] or mat[i][j]== mat[i][j + 1]):
-                return 'GAME NOT OVER'
+    def has_empty_cells(self):
+        for i in range(self.size):
+            for j in range(self.size):
+                if self.cells[i][j] == 0:
+                    return True
+        return False
 
-    for j in range(3):
-        if(mat[3][j]== mat[3][j + 1]):
-            return 'GAME NOT OVER'
+    def can_merge(self):
+        for i in range(self.size):
+            for j in range(self.size - 1):
+                if self.cells[i][j] == self.cells[i][j + 1]:
+                    return True
+        for j in range(self.size):
+            for i in range(self.size - 1):
+                if self.cells[i][j] == self.cells[i + 1][j]:
+                    return True
+        return False
 
-    for i in range(3):
-        if(mat[i][3]== mat[i + 1][3]):
-            return 'GAME NOT OVER'
+    def set_cells(self, cells):
+        self.cells = cells
 
-    # else we have lost the game
-    return 'LOST'
+    def print_grid(self):
+        print('-' * 40)
+        for i in range(self.size):
+            for j in range(self.size):
+                if self.cells[i][j] == 0:
+                    print('0\t', end='')
+                else:
+                    # Use bit shift to get actual value
+                    print(f'{1 << self.cells[i][j]}\t', end='')
+            print()
+        print('-' * 40)
 
-# all the functions defined below
-# are for left swap initially.
 
-# function to compress the grid
-# after every step before and
-# after merging cells.
-def compress(mat):
+class GamePanel:
+    '''The GUI view class of the 2048 game showing via tkinter.'''
+    CELL_PADDING = 10
+    BACKGROUND_COLOR = '#92877d'
+    EMPTY_CELL_COLOR = '#9e948a'
+    CELL_BACKGROUND_COLOR_DICT = {
+        '2': '#eee4da',
+        '4': '#ede0c8',
+        '8': '#f2b179',
+        '16': '#f59563',
+        '32': '#f67c5f',
+        '64': '#f65e3b',
+        '128': '#edcf72',
+        '256': '#edcc61',
+        '512': '#edc850',
+        '1024': '#edc53f',
+        '2048': '#edc22e',
+        'beyond': '#3c3a32'
+    }
+    CELL_COLOR_DICT = {
+        '2': '#776e65',
+        '4': '#776e65',
+        '8': '#f9f6f2',
+        '16': '#f9f6f2',
+        '32': '#f9f6f2',
+        '64': '#f9f6f2',
+        '128': '#f9f6f2',
+        '256': '#f9f6f2',
+        '512': '#f9f6f2',
+        '1024': '#f9f6f2',
+        '2048': '#f9f6f2',
+        'beyond': '#f9f6f2'
+    }
+    FONT = ('Verdana', 24, 'bold')
+    UP_KEYS = ('w', 'W', 'Up')
+    LEFT_KEYS = ('a', 'A', 'Left')
+    DOWN_KEYS = ('s', 'S', 'Down')
+    RIGHT_KEYS = ('d', 'D', 'Right')
 
-    # bool variable to determine
-    # any change happened or not
-    changed = False
+    def __init__(self, grid):
+        self.grid = grid
+        self.root = tk.Tk()
+        if sys.platform == 'win32':
+            self.root.iconbitmap('2048.ico')
+        self.root.title('2048')
+        self.root.resizable(False, False)
 
-    # empty grid 
-    new_mat = []
+        # Load the best score from a file
+        self.best_score = self.load_best_score()
 
-    # with all cells empty
-    for i in range(4):
-        new_mat.append([0] * 4)
-        
-    # here we will shift entries
-    # of each cell to it's extreme
-    # left row by row
-    # loop to traverse rows
-    for i in range(4):
-        pos = 0
+        # Create a frame for the score labels
+        self.score_frame = tk.Frame(self.root)
+        self.score_frame.pack()
 
-        # loop to traverse each column
-        # in respective row
-        for j in range(4):
-            if(mat[i][j] != 0):
-                
-                # if cell is non empty then
-                # we will shift it's number to
-                # previous empty cell in that row
-                # denoted by pos variable
-                new_mat[i][pos] = mat[i][j]
-                
-                if(j != pos):
-                    changed = True
-                pos += 1
+        # Label for the current score
+        self.current_score_label = tk.Label(
+            self.score_frame, text=f"Score: {self.grid.current_score}", font=('Verdana', 16)
+        )
+        self.current_score_label.pack(side=tk.LEFT, padx=10)
 
-    # returning new compressed matrix
-    # and the flag variable.
-    return new_mat, changed
+        # Label for the best score
+        self.best_score_label = tk.Label(
+            self.score_frame, text=f"Best: {self.best_score}", font=('Verdana', 16)
+        )
+        self.best_score_label.pack(side=tk.LEFT, padx=10)
 
-# function to merge the cells
-# in matrix after compressing
-def merge(mat):
-    
-    changed = False
-    
-    for i in range(4):
-        for j in range(3):
+        # Background frame for the grid
+        self.background = tk.Frame(self.root, bg=GamePanel.BACKGROUND_COLOR)
+        self.cell_labels = []
+        for i in range(self.grid.size):
+            row_labels = []
+            for j in range(self.grid.size):
+                label = tk.Label(
+                    self.background,
+                    text='',
+                    bg=GamePanel.EMPTY_CELL_COLOR,
+                    justify=tk.CENTER,
+                    font=GamePanel.FONT,
+                    width=4,
+                    height=2
+                )
+                label.grid(row=i, column=j, padx=10, pady=10)
+                row_labels.append(label)
+            self.cell_labels.append(row_labels)
+        self.background.pack(side=tk.TOP)
 
-            # if current cell has same value as
-            # next cell in the row and they
-            # are non empty then
-            if(mat[i][j] == mat[i][j + 1] and mat[i][j] != 0):
+    def load_best_score(self):
+        try:
+            with open('best_score.txt', 'r') as f:
+                return int(f.read())
+        except (FileNotFoundError, ValueError):
+            return 0
 
-                # double current cell value and
-                # empty the next cell
-                mat[i][j] = mat[i][j] * 2
-                mat[i][j + 1] = 0
+    def save_best_score(self):
+        with open('best_score.txt', 'w') as f:
+            f.write(str(self.best_score))
 
-                # make bool variable True indicating
-                # the new grid after merging is
-                # different.
-                changed = True
+    def paint(self):
+        for i in range(self.grid.size):
+            for j in range(self.grid.size):
+                exponent = self.grid.cells[i][j]
+                if exponent == 0:
+                    self.cell_labels[i][j].configure(
+                        text='',
+                        bg=GamePanel.EMPTY_CELL_COLOR
+                    )
+                else:
+                    actual_value = 1 << exponent  # Calculate the actual value
+                    cell_text = str(actual_value)
+                    if actual_value > 2048:
+                        bg_color = GamePanel.CELL_BACKGROUND_COLOR_DICT.get(
+                            'beyond')
+                        fg_color = GamePanel.CELL_COLOR_DICT.get('beyond')
+                    else:
+                        bg_color = GamePanel.CELL_BACKGROUND_COLOR_DICT.get(
+                            cell_text)
+                        fg_color = GamePanel.CELL_COLOR_DICT.get(cell_text)
+                    self.cell_labels[i][j].configure(
+                        text=cell_text,
+                        bg=bg_color,
+                        fg=fg_color
+                    )
 
-    return mat, changed
+        # Update the current score label
+        self.current_score_label.configure(
+            text=f"Score: {self.grid.current_score}")
 
-# function to reverse the matrix
-# means reversing the content of
-# each row (reversing the sequence)
-def reverse(mat):
-    new_mat =[]
-    for i in range(4):
-        new_mat.append([])
-        for j in range(4):
-            new_mat[i].append(mat[i][3 - j])
-    return new_mat
+        # Update the best score if necessary
+        if self.grid.current_score > self.best_score:
+            self.best_score = self.grid.current_score
+            self.best_score_label.configure(text=f"Best: {self.best_score}")
+            self.save_best_score()
 
-# function to get the transpose
-# of matrix means interchanging
-# rows and column
-def transpose(mat):
-    new_mat = []
-    for i in range(4):
-        new_mat.append([])
-        for j in range(4):
-            new_mat[i].append(mat[j][i])
-    return new_mat
+    def returnScore(self, score):
+        return score
 
-# function to update the matrix
-# if we move / swipe left
-def move_left(grid):
 
-    # first compress the grid
-    new_grid, changed1 = compress(grid)
+class DummyPanel:
+    '''A dummy panel for headless mode without GUI.'''
 
-    # then merge the cells.
-    new_grid, changed2 = merge(new_grid)
-    
-    changed = changed1 or changed2
+    def __init__(self, grid):
+        self.grid = grid
 
-    # again compress after merging.
-    new_grid, temp = compress(new_grid)
+    def paint(self):
+        pass
 
-    # return new matrix and bool changed
-    # telling whether the grid is same
-    # or different
-    return new_grid, changed
+    def returnScore(self, score):
+        return score
 
-# function to update the matrix
-# if we move / swipe right
-def move_right(grid):
 
-    # to move right we just reverse
-    # the matrix 
-    new_grid = reverse(grid)
+class Game:
+    '''The main game class which is the controller of the whole game.'''
 
-    # then move left
-    new_grid, changed = move_left(new_grid)
+    def __init__(self, grid, panel, strategy_function=None, delay=200, use_gui=True):
+        self.grid = grid
+        self.panel = panel
+        self.start_cells_num = 2
+        self.over = False
+        self.won = False
+        self.keep_playing = False
+        self.strategy_function = strategy_function
+        self.valid_actions = ['up', 'down', 'left', 'right']
+        self.delay = delay
+        self.use_gui = use_gui
 
-    # then again reverse matrix will
-    # give us desired result
-    new_grid = reverse(new_grid)
-    return new_grid, changed
+    def is_game_terminated(self):
+        return self.over or (self.won and (not self.keep_playing))
 
-# function to update the matrix
-# if we move / swipe up
-def move_up(grid):
+    def start(self):
+        self.add_start_cells()
+        self.panel.paint()
+        if self.use_gui:
+            # Start the auto-play loop with GUI
+            self.panel.root.after(self.delay, self.auto_play)
+            self.panel.root.mainloop()
+        else:
+            # Start the game loop without GUI
+            while not self.is_game_terminated():
+                self.auto_play()
+            return self.grid.current_score
 
-    # to move up we just take
-    # transpose of matrix
-    new_grid = transpose(grid)
+    def add_start_cells(self):
+        for _ in range(self.start_cells_num):
+            self.grid.random_cell()
 
-    # then move left (calling all
-    # included functions) then
-    new_grid, changed = move_left(new_grid)
+    def can_move(self):
+        return self.grid.has_empty_cells() or self.grid.can_merge()
 
-    # again take transpose will give
-    # desired results
-    new_grid = transpose(new_grid)
-    return new_grid, changed
+    def move(self, direction):
+        self.grid.clear_flags()
+        if direction == 'up':
+            self.up()
+        elif direction == 'down':
+            self.down()
+        elif direction == 'left':
+            self.left()
+        elif direction == 'right':
+            self.right()
+        else:
+            pass
 
-# function to update the matrix
-# if we move / swipe down
-def move_down(grid):
+        self.panel.paint()
+        if self.grid.found_2048():
+            self.you_win()
+            if not self.keep_playing:
+                return
 
-    # to move down we take transpose
-    new_grid = transpose(grid)
+        if self.grid.moved:
+            self.grid.random_cell()
 
-    # move right and then again
-    new_grid, changed = move_right(new_grid)
+        self.panel.paint()
+        if not self.can_move():
+            self.over = True
+            self.game_over()
+            return
 
-    # take transpose will give desired
-    # results.
-    new_grid = transpose(new_grid)
-    return new_grid, changed
+    def auto_play(self):
+        if self.is_game_terminated():
+            return self.grid.current_score
 
-# this file only contains all the logic
-# functions to be called in main function
-# present in the other file
+        if self.strategy_function:
+            action = self.strategy_function(self.grid)
+            if action not in self.valid_actions:
+                print('Invalid action from strategy function.')
+                return
+        else:
+            action = random.choice(self.valid_actions)
+
+        self.move(action)
+
+        if self.use_gui:
+            # Schedule the next move with GUI
+            self.panel.root.after(self.delay, self.auto_play)
+
+    def you_win(self):
+        if not self.won:
+            self.won = True
+            if self.use_gui:
+                if messagebox.askyesno('2048', 'You Win!\nAre you going to continue the 2048 game?'):
+                    self.keep_playing = True
+            else:
+                self.keep_playing = False
+
+    def game_over(self):
+        if self.use_gui:
+            messagebox.showinfo('2048', 'Oops!\nGame over!')
+        else:
+            pass
+
+    def up(self):
+        self.grid.transpose()
+        self.grid.left_compress()
+        self.grid.left_merge()
+        self.grid.moved = self.grid.compressed or self.grid.merged
+        self.grid.left_compress()
+        self.grid.transpose()
+
+    def left(self):
+        self.grid.left_compress()
+        self.grid.left_merge()
+        self.grid.moved = self.grid.compressed or self.grid.merged
+        self.grid.left_compress()
+
+    def down(self):
+        self.grid.transpose()
+        self.grid.reverse()
+        self.grid.left_compress()
+        self.grid.left_merge()
+        self.grid.moved = self.grid.compressed or self.grid.merged
+        self.grid.left_compress()
+        self.grid.reverse()
+        self.grid.transpose()
+
+    def right(self):
+        self.grid.reverse()
+        self.grid.left_compress()
+        self.grid.left_merge()
+        self.grid.moved = self.grid.compressed or self.grid.merged
+        self.grid.left_compress()
+        self.grid.reverse()
