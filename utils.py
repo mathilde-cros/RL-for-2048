@@ -2,7 +2,7 @@
 import argparse
 
 description = "Imitation learning"
-algo_list = ["random"]
+algo_list = ["random", "heuristic"]
 
 
 def get_args():

@@ -1,4 +1,4 @@
-from algorithms import RandomStrategy
+from algorithms import RandomStrategy, HeuristicStrategy
 from logic import Grid, GamePanel, Game, DummyPanel
 from utils import get_args
 
@@ -33,14 +33,21 @@ if __name__ == "__main__":
     runs = args.runs
 
     if args.algo == "random":
-        scores = []
-        for _ in range(runs):
-            game = Game2048(RandomStrategy, delay=args.delay, use_gui=use_gui)
-            result = game.start()
-            scores.append(result)
-            print("RESULT:", result)
-        if runs > 1:
-            mean_score = sum(scores) / len(scores)
-            print(f"Mean score over {runs} runs: {mean_score}")
-            with open('./results/random_strategy_mean_score.txt', 'w') as f:
-                f.write(f"Mean score over {runs} runs: {mean_score}")
+        strategy = RandomStrategy
+    elif args.algo == "heuristic":
+        strategy = HeuristicStrategy
+    else:
+        print(f"Unknown algorithm: {args.algo}")
+        exit(1)
+
+    scores = []
+    for _ in range(runs):
+        game = Game2048(strategy, delay=args.delay, use_gui=use_gui)
+        result = game.start()
+        scores.append(result)
+        print("RESULT:", result)
+    if runs > 1:
+        mean_score = sum(scores) / len(scores)
+        print(f"Mean score over {runs} runs: {mean_score}")
+        with open(f'./results/{args.algo}_mean_score.txt', 'w') as f:
+            f.write(f"Mean score over {runs} runs: {mean_score}")

@@ -1,5 +1,6 @@
 import tkinter as tk
 import tkinter.messagebox as messagebox
+import copy
 
 import sys
 import random
@@ -117,6 +118,61 @@ class Grid:
                     print(f'{1 << self.cells[i][j]}\t', end='')
             print()
         print('-' * 40)
+
+    def clone(self):
+        '''Create a deep copy of the grid.'''
+        new_grid = Grid(self.size)
+        new_grid.cells = copy.deepcopy(self.cells)
+        new_grid.current_score = self.current_score
+        return new_grid
+
+    def move(self, direction):
+        '''Apply a move to the grid. Returns True if the grid has changed.'''
+        self.clear_flags()
+        if direction == 'up':
+            self.up()
+        elif direction == 'down':
+            self.down()
+        elif direction == 'left':
+            self.left()
+        elif direction == 'right':
+            self.right()
+        else:
+            return False
+        return self.moved
+
+    # Implement the movement methods within the Grid class
+    def up(self):
+        self.transpose()
+        self.left_compress()
+        self.left_merge()
+        self.moved = self.compressed or self.merged
+        self.left_compress()
+        self.transpose()
+
+    def down(self):
+        self.transpose()
+        self.reverse()
+        self.left_compress()
+        self.left_merge()
+        self.moved = self.compressed or self.merged
+        self.left_compress()
+        self.reverse()
+        self.transpose()
+
+    def left(self):
+        self.left_compress()
+        self.left_merge()
+        self.moved = self.compressed or self.merged
+        self.left_compress()
+
+    def right(self):
+        self.reverse()
+        self.left_compress()
+        self.left_merge()
+        self.moved = self.compressed or self.merged
+        self.left_compress()
+        self.reverse()
 
 
 class GamePanel:
@@ -308,25 +364,15 @@ class Game:
         return self.grid.has_empty_cells() or self.grid.can_merge()
 
     def move(self, direction):
-        self.grid.clear_flags()
-        if direction == 'up':
-            self.up()
-        elif direction == 'down':
-            self.down()
-        elif direction == 'left':
-            self.left()
-        elif direction == 'right':
-            self.right()
-        else:
-            pass
-
+        moved = self.grid.move(direction)
         self.panel.paint()
+
         if self.grid.found_2048():
             self.you_win()
             if not self.keep_playing:
                 return
 
-        if self.grid.moved:
+        if moved:
             self.grid.random_cell()
 
         self.panel.paint()
