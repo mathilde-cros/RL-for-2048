@@ -18,6 +18,18 @@ class Grid:
         self.moved = False
         self.current_score = 0
 
+    def print_grid(self):
+        print('-' * 40)
+        for i in range(self.size):
+            for j in range(self.size):
+                if self.cells[i][j] == 0:
+                    print('0\t', end='')
+                else:
+                    # Use bit shift to get actual value
+                    print(f'{1 << self.cells[i][j]}\t', end='')
+            print()
+        print('-' * 40)
+
     def random_cell(self):
         cell = random.choice(self.retrieve_empty_cells())
         i, j = cell

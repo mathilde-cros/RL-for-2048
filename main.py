@@ -1,9 +1,10 @@
-from algorithms import RandomStrategy, HeuristicStrategy, PolicyGradientStrategy, HeuristicStrategyWithLookahead
+from algorithms import RandomStrategy, PolicyGradientStrategy, HeuristicStrategyWithLookahead, MCTSStrategy
 from logic import Grid, GamePanel, Game, DummyPanel
 from utils import get_args
 from torch import nn, optim
 import itertools
 import os
+
 
 class Game2048:
     def __init__(self, strategy, delay, size=4, use_gui=True, heuristic=None, strategy_params=None):
@@ -37,10 +38,13 @@ class Game2048:
         # Retrieve the updated strategy instance
         self.strategy_instance = game_instance.strategy_instance
         return result
-    
-## The gridsearch for the neural netwokr tuning in Policy Gradient algorithm
+
+# The gridsearch for the neural netwokr tuning in Policy Gradient algorithm
+
+
 def grid_search(args):
-    hidden_sizes_grid = [[64], [128], [256], [512], [64, 64], [128, 64], [256, 128], [128, 128], [256, 256], [512, 256], [256, 128, 64], [512, 256, 128], [256, 256, 256], [512, 512, 512], [256, 256, 128], [512, 512, 256], [512, 512, 512], [512, 512, 512, 512], [1024, 512, 256], [1024, 1024, 512], [1024, 1024, 1024], [1024, 1024, 1024, 1024]]
+    hidden_sizes_grid = [[64], [128], [256], [512], [64, 64], [128, 64], [256, 128], [128, 128], [256, 256], [512, 256], [256, 128, 64], [512, 256, 128], [256, 256, 256], [
+        512, 512, 512], [256, 256, 128], [512, 512, 256], [512, 512, 512], [512, 512, 512, 512], [1024, 512, 256], [1024, 1024, 512], [1024, 1024, 1024], [1024, 1024, 1024, 1024]]
     learning_rates = [1e-2, 5e-3, 1e-3, 5e-4, 1e-4]
     activation_functions = [nn.ReLU, nn.LeakyReLU, nn.ELU, nn.Tanh]
     optimizers = [optim.Adam, optim.SGD, optim.RMSprop]
@@ -63,7 +67,8 @@ def grid_search(args):
     ))
 
     for idx, (hidden_sizes, lr, activation_fn, optimizer_cls, gamma, entropy_coef) in enumerate(hyperparameter_combinations):
-        print(f"Testing configuration {idx+1}/{len(hyperparameter_combinations)}:")
+        print(
+            f"Testing configuration {idx+1}/{len(hyperparameter_combinations)}:")
         print(f"  hidden_sizes={hidden_sizes}, learning_rate={lr}, activation_fn={activation_fn.__name__}, optimizer={optimizer_cls.__name__}, gamma={gamma}, entropy_coef={entropy_coef}")
         scores = []
         for i in range(num_runs):
@@ -122,7 +127,7 @@ def grid_search(args):
                 if max(res['scores']) > best_result_overall:
                     best_result_overall = max(res['scores'])
                     best_config = res
-            
+
             f.write(f"Best configuration:\n")
             f.write(f"  hidden_sizes={best_config['hidden_sizes']}\n")
             f.write(f"  learning_rate={best_config['learning_rate']}\n")
@@ -139,30 +144,33 @@ def grid_search(args):
 if __name__ == "__main__":
     args = get_args()
     use_gui = args.gui
-    
     if args.grid_search:
         grid_search(args)
-    else:
-        runs = args.runs
 
-        if args.algo == "random":
-            strategy = RandomStrategy
-        elif args.algo == "heuristic":
-            strategy = HeuristicStrategyWithLookahead
-        elif args.algo == "policy_gradient":
-            strategy = PolicyGradientStrategy()
-        else:
-            print(f"Unknown algorithm: {args.algo}")
-            exit(1)
-        heuristic = args.heuristic
-        scores = []
-        for i in range(runs):
-            print(f"Running game number {i+1}")
-            game = Game2048(strategy, delay=args.delay,
-                            use_gui=use_gui, heuristic=heuristic)
-            result = game.start()
-            scores.append(result)
-            print("RESULT:", result)
+    runs = args.runs
+
+    if args.algo == "random":
+        strategy = RandomStrategy
+    elif args.algo == "heuristic":
+        strategy = HeuristicStrategyWithLookahead
+    elif args.algo == "mcts":
+        strategy = MCTSStrategy
+
+    elif args.algo == "policy_gradient":
+        strategy = PolicyGradientStrategy()
+    else:
+
+        print(f"Unknown algorithm: {args.algo}")
+        exit(1)
+    heuristic = args.heuristic
+    scores = []
+    for i in range(runs):
+        print(f"Running game number {i+1}")
+        game = Game2048(strategy, delay=args.delay,
+                        use_gui=use_gui, heuristic=heuristic)
+        result = game.start()
+        scores.append(result)
+        print("RESULT:", result)
         if runs > 1:
             mean_score = sum(scores) / len(scores)
             print(f"Mean score over {runs} runs: {mean_score}")
