@@ -86,6 +86,10 @@ class Grid:
                     return True
         return False
 
+    def place_tile(self, cell, value):
+        i, j = cell
+        self.cells[i][j] = value
+
     def has_empty_cells(self):
         for i in range(self.size):
             for j in range(self.size):
@@ -328,7 +332,7 @@ class DummyPanel:
 class Game:
     '''The main game class which is the controller of the whole game.'''
 
-    def __init__(self, grid, panel, strategy_function=None, delay=200, use_gui=True):
+    def __init__(self, grid, panel, strategy_function=None, delay=200, use_gui=True, heuristic=None):
         self.grid = grid
         self.panel = panel
         self.start_cells_num = 2
@@ -339,6 +343,7 @@ class Game:
         self.valid_actions = ['up', 'down', 'left', 'right']
         self.delay = delay
         self.use_gui = use_gui
+        self.heuristic = heuristic
 
     def is_game_terminated(self):
         return self.over or (self.won and (not self.keep_playing))
@@ -367,10 +372,10 @@ class Game:
         moved = self.grid.move(direction)
         self.panel.paint()
 
-        if self.grid.found_2048():
-            self.you_win()
-            if not self.keep_playing:
-                return
+        # if self.grid.found_2048():
+        #     self.you_win()
+        #     if not self.keep_playing:
+        #         return
 
         if moved:
             self.grid.random_cell()
@@ -386,7 +391,7 @@ class Game:
             return self.grid.current_score
 
         if self.strategy_function:
-            action = self.strategy_function(self.grid)
+            action = self.strategy_function(self.grid, self.heuristic)
             if action not in self.valid_actions:
                 print('Invalid action from strategy function.')
                 return
