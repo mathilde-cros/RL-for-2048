@@ -1,4 +1,4 @@
-from algorithms import RandomStrategy, HeuristicStrategy
+from algorithms import RandomStrategy, HeuristicStrategy, PolicyGradientStrategy
 from logic import Grid, GamePanel, Game, DummyPanel
 from utils import get_args
 
@@ -36,6 +36,8 @@ if __name__ == "__main__":
         strategy = RandomStrategy
     elif args.algo == "heuristic":
         strategy = HeuristicStrategy
+    elif args.algo == "policy_gradient":
+        strategy = PolicyGradientStrategy()
     else:
         print(f"Unknown algorithm: {args.algo}")
         exit(1)
