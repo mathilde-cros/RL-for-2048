@@ -1,1 +1,0 @@
-Mean score over 100 runs: 3280.88
