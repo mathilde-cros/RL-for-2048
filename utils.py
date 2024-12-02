@@ -1,11 +1,9 @@
-
 import argparse
 
 description = "Imitation learning"
 algo_list = ["random", "heuristic", "policy_gradient"]
 heuristic_list = ["empty-cells", "snake",
                   "monotonic", "smoothness", "merge-potential", "corner-max-tile", "combined"]
-
 
 def get_args():
     parser = argparse.ArgumentParser(description=description)
@@ -25,6 +23,9 @@ def get_args():
 
     parser.add_argument('--heuristic', choices=heuristic_list,
                         required=False, default=heuristic_list[0])
+    
+    parser.add_argument('--grid_search', action='store_true', help='Perform grid search over hyperparameters', default=False)
+    parser.add_argument('--runs_per_combo', type=int, default=3, help='Number of runs per hyperparameter combination during grid search')
 
     parser.set_defaults(**get_default_args() or {})
 

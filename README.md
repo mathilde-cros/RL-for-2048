@@ -13,3 +13,10 @@ To run the code and play the game yourself, simply run python 2048.py in the ter
 - 'r' : Move Right
 
 To run the code and for the reinforcement learning model to play, run python RL_2048.py in the terminal. The model will start training and will play the game itself.
+
+
+ABOVE NEEDS TO BE UPDATED
+
+To run the gradient policy algorithm with the gridsearch for 50 runs per combination, run:
+python main.py --algo policy_gradient --grid_search --runs_per_combo 50
+The results will then be saved in the results folder under the file name grid_search_results.csv.

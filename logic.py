@@ -391,7 +391,10 @@ class Game:
             return self.grid.current_score
 
         if self.strategy_function:
-            action = self.strategy_function(self.grid, self.heuristic)
+            if self.heuristic and self.strategy_function.__code__.co_argcount == 2:
+                action = self.strategy_function(self.grid, self.heuristic)
+            else:
+                action = self.strategy_function(self.grid)
             if action not in self.valid_actions:
                 print('Invalid action from strategy function.')
                 return
