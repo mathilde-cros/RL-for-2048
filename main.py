@@ -1,9 +1,13 @@
-from algorithms import RandomStrategy, PolicyGradientStrategy, HeuristicStrategyWithLookahead, MCTSStrategy
-from logic import Grid, GamePanel, Game, DummyPanel
-from utils import get_args
-from torch import nn, optim
-import itertools
+from utils.helpers import get_args
+from utils.logic import Grid, GamePanel, Game, DummyPanel
+from algorithms.mcts import MCTSStrategy
+from algorithms.algorithms import RandomStrategy, HeuristicStrategyWithLookahead
 import os
+import itertools
+from torch import nn, optim
+from utils import get_args
+from logic import Grid, GamePanel, Game, DummyPanel
+from algorithms import RandomStrategy, PolicyGradientStrategy, HeuristicStrategyWithLookahead, MCTSStrategy
 
 
 class Game2048:
@@ -162,6 +166,7 @@ if __name__ == "__main__":
 
         print(f"Unknown algorithm: {args.algo}")
         exit(1)
+
     heuristic = args.heuristic
     scores = []
     for i in range(runs):

@@ -157,7 +157,11 @@ class Grid:
             return False
         return self.moved
 
+    def can_move(self):
+        return self.has_empty_cells() or self.can_merge()
+
     # Implement the movement methods within the Grid class
+
     def up(self):
         self.transpose()
         self.left_compress()

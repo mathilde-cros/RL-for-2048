@@ -39,12 +39,7 @@ def get_args():
 
 
 def get_default_args() -> dict:
-
-
-<< << << < HEAD
-pass
-== == == =
-pass
+    pass
 
 
 class MCTSNode:
@@ -55,30 +50,26 @@ class MCTSNode:
         self.children = []
         self.visits = 0
         self.total_score = 0
-        self.untried_actions = self.get_possible_actions()
-
-    def get_possible_actions(self):
-        actions = ['up', 'down', 'left', 'right']
-        valid_actions = []
-        for action in actions:
-            grid_copy = self.grid.clone()
-            if grid_copy.move(action):
-                valid_actions.append(action)
-        return valid_actions
 
     def is_terminal_node(self):
-        return not self.untried_actions and not self.children
+        return not self.grid.can_move()
 
     def is_fully_expanded(self):
         return len(self.untried_actions) == 0
 
-    def best_child(self, c_param=1.4):
-        choices_weights = [
-            (child.total_score / child.visits) + c_param *
-            np.sqrt((2 * np.log(self.visits) / child.visits))
+    def best_child(self, exploration_weight=2):
+        """Select the best child using UCT (Upper Confidence Bound for Trees)."""
+        scores = [
+            (
+                child.total_score / child.visits +  # Exploitation
+                exploration_weight * \
+                np.sqrt(np.log(self.visits) / child.visits)  # Exploration
+            )
             for child in self.children
         ]
-        return self.children[np.argmax(choices_weights)]
+        return self.children[np.argmax(scores)]
 
-
->>>>>> > fd881d6(start MCTS)
+    @property
+    def untried_actions(self):
+        tried_actions = {child.action for child in self.children}
+        return [action for action in ['up', 'down', 'left', 'right'] if action not in tried_actions and self.grid.clone().move(action)]
