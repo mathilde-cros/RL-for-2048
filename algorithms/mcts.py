@@ -4,7 +4,7 @@ from utils.helpers import MCTSNode
 ### Monte Carlo Tree Search (MCTS) ###
 
 
-def MCTSStrategy(grid, heuristic, iterations=50, simulation_depth=200, exploration_weight=0.4):
+def MCTSStrategy(grid, iterations=50, simulation_depth=200, exploration_weight=0.4):
     root = MCTSNode(grid)
 
     for _ in range(iterations):
@@ -38,7 +38,7 @@ def MCTSStrategy(grid, heuristic, iterations=50, simulation_depth=200, explorati
                 simulation_grid.random_cell()
 
         # Backpropagation
-        if not heuristic:
+        if True:
             heuristic_fct = combined_heuristic
             score = heuristic_fct(simulation_grid)
         else:

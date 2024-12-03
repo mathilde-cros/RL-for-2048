@@ -418,7 +418,7 @@ class Game:
             return self.grid.current_score
 
         if self.strategy_function:
-            if self.heuristic and self.strategy_function.__code__.co_argcount == 2:
+            if self.heuristic and self.strategy_function.__code__.co_argcount >= 2:
                 action = self.strategy_function(self.grid, self.heuristic)
             else:
                 action = self.strategy_function(self.grid)

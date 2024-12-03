@@ -1,13 +1,10 @@
 from utils.helpers import get_args
 from utils.logic import Grid, GamePanel, Game, DummyPanel
 from algorithms.mcts import MCTSStrategy
-from algorithms.algorithms import RandomStrategy, HeuristicStrategyWithLookahead
+from algorithms.algorithms import RandomStrategy, HeuristicStrategyWithLookahead, PolicyGradientStrategy
 import os
 import itertools
 from torch import nn, optim
-from utils import get_args
-from logic import Grid, GamePanel, Game, DummyPanel
-from algorithms import RandomStrategy, PolicyGradientStrategy, HeuristicStrategyWithLookahead, MCTSStrategy
 
 
 class Game2048:
