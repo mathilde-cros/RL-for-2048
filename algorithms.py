@@ -315,29 +315,30 @@ def HeuristicStrategyWithLookahead(grid, heuristic_name, depth=2):
 
 # Policy Network Definition
 class PolicyNetwork(nn.Module):
-    def __init__(self, input_size, output_size, hidden_sizes):
+    def __init__(self, input_size, output_size, hidden_sizes, activation_fn=nn.ReLU):
         super(PolicyNetwork, self).__init__()
         layers = []
         last_size = input_size
         for hidden_size in hidden_sizes:
             layers.append(nn.Linear(last_size, hidden_size))
-            layers.append(nn.ReLU())
+            layers.append(activation_fn())
             last_size = hidden_size
         layers.append(nn.Linear(last_size, output_size))
         self.model = nn.Sequential(*layers)
 
     def forward(self, x):
-        x = torch.relu(self.model(x))
-        return torch.softmax(x, dim=-1)
+        return torch.softmax(self.model(x), dim=-1)
 
 
 # Policy Gradient Strategy
 class PolicyGradientStrategy:
-    def __init__(self, hidden_sizes=[128], learning_rate=1e-3):
+    def __init__(self, hidden_sizes=[128], learning_rate=1e-3, activation_fn=nn.ReLU, optimizer_cls=optim.Adam, gamma=0.99, entropy_coef=0.0):
         self.actions = ['up', 'down', 'left', 'right']
-        self.policy_net = PolicyNetwork(input_size=16, output_size=4, hidden_sizes=hidden_sizes)
-        self.optimizer = optim.Adam(self.policy_net.parameters(), lr=learning_rate)
-        self.gamma = 0.99  # Discount factor
+        self.policy_net = PolicyNetwork(
+            input_size=16, output_size=4, hidden_sizes=hidden_sizes, activation_fn=activation_fn)
+        self.optimizer = optimizer_cls(self.policy_net.parameters(), lr=learning_rate)
+        self.gamma = gamma  # Discount factor
+        self.entropy_coef = entropy_coef  # Coefficient for entropy regularization
         self.saved_log_probs = []
         self.rewards = []
 
@@ -347,7 +348,6 @@ class PolicyGradientStrategy:
         return torch.tensor(state, dtype=torch.float32)
 
     def select_action(self, grid):
-        """Select an action using the policy network."""
         state = self.preprocess_grid(grid)
         action_probs = self.policy_net(state)
         m = torch.distributions.Categorical(action_probs)
@@ -355,7 +355,7 @@ class PolicyGradientStrategy:
         self.saved_log_probs.append(m.log_prob(action))
         return self.actions[action.item()]
 
-    def train(self, state, action, reward):
+    def train(self):
         R = 0
         policy_loss = []
         returns = []
@@ -364,12 +364,15 @@ class PolicyGradientStrategy:
             R = r + self.gamma * R
             returns.insert(0, R)
         returns = torch.tensor(returns)
-        returns = (returns - returns.mean()) / (returns.std() + 1e-5)  # Normalize returns
+        baseline = returns.mean()
         for log_prob, R in zip(self.saved_log_probs, returns):
-            policy_loss.append(-log_prob * R)
+            advantage = R - baseline
+            policy_loss.append(-log_prob * advantage)
+        # Entropy regularization
+        entropy_loss = -self.entropy_coef * torch.stack(self.saved_log_probs).mean()
         self.optimizer.zero_grad()
-        policy_loss = torch.cat(policy_loss).sum()
-        policy_loss.backward()
+        loss = torch.stack(policy_loss).sum() + entropy_loss
+        loss.backward()
         self.optimizer.step()
         # Reset buffers
         self.saved_log_probs = []

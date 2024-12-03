@@ -340,10 +340,12 @@ class Game:
         self.won = False
         self.keep_playing = False
         self.strategy_function = strategy_function
+        self.strategy_instance = strategy_function  # Store it explicitly
         self.valid_actions = ['up', 'down', 'left', 'right']
         self.delay = delay
         self.use_gui = use_gui
         self.heuristic = heuristic
+        self.previous_score = 0
 
     def is_game_terminated(self):
         return self.over or (self.won and (not self.keep_playing))
@@ -370,12 +372,16 @@ class Game:
 
     def move(self, direction):
         moved = self.grid.move(direction)
-        self.panel.paint()
+        reward = 0  # Initialize reward
+
+        score_increase = self.grid.current_score - self.previous_score
+        reward += score_increase
 
         # if self.grid.found_2048():
         #     self.you_win()
         #     if not self.keep_playing:
         #         return
+        self.panel.paint()
 
         if moved:
             self.grid.random_cell()
@@ -385,6 +391,11 @@ class Game:
             self.over = True
             self.game_over()
             return
+
+        self.previous_score = self.grid.current_score
+
+        if hasattr(self.strategy_instance, 'rewards'):
+            self.strategy_instance.rewards.append(reward)
 
     def auto_play(self):
         if self.is_game_terminated():
