@@ -1,9 +1,11 @@
 import random
 import numpy as np
+from utils import MCTSNode
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
+
 
 def RandomStrategy(grid):
     """
@@ -41,10 +43,10 @@ def snake_heuristic(grid):
     Heuristic Value = Sum of (Tile Value * Corresponding Weight)
     """
     weights = [
-        [16, 8, 4, 2],
-        [8, 4, 2, 1],
-        [4, 2, 1, 0],
-        [2, 1, 0, -1]
+        [2, 4, 8, 16],
+        [256, 128, 64, 32],
+        [512, 1024, 2048, 4096],
+        [65536, 32768, 16384, 8192]
     ]
     score = 0
     for i in range(grid.size):
@@ -151,6 +153,31 @@ def corner_max_tile_heuristic(grid):
     return -max_tile  # Penalize if the max tile is not in a corner
 
 
+def homogeneity_heuristic(grid):
+    """
+    Evaluates the grid based on how homogeneous the values of neighboring tiles are.
+
+    The heuristic rewards grids where neighboring tiles have similar values, encouraging smooth gradients that
+    make merging easier in future moves.
+
+    Heuristic Value = Higher value if neighboring tiles have similar values.
+    """
+    homogeneity_score = 0
+    for i in range(grid.size):
+        for j in range(grid.size):
+            value = grid.cells[i][j]
+            if value != 0:
+                # Compare with right neighbor
+                if j + 1 < grid.size and grid.cells[i][j + 1] != 0:
+                    homogeneity_score -= abs(value - grid.cells[i][j + 1])
+                # Compare with bottom neighbor
+                if i + 1 < grid.size and grid.cells[i + 1][j] != 0:
+                    homogeneity_score -= abs(value - grid.cells[i + 1][j])
+
+    # A higher score is better, so we return the negative of the differences
+    return -homogeneity_score
+
+
 def combined_heuristic(grid):
     """
     Evaluates the grid by combining multiple heuristics into a single score.
@@ -169,18 +196,16 @@ def combined_heuristic(grid):
 
     # Weights for each heuristic (adjust these weights based on experimentation)
     weights = {
-        'empty_cells': 10,
-        'monotonicity': 10,
-        'merge_potential': 5,
-        'corner_max_tile': 3,
+        'empty_cells': 20,
+        'monotonicity': 40,
+        'merge_potential': 40,
     }
 
     # Combined heuristic score
     combined_score = (
         empty_cells_score * weights['empty_cells'] +
         monotonicity_score * weights['monotonicity'] +
-        merge_potential_score * weights['merge_potential'] +
-        corner_max_tile_score * weights['corner_max_tile']
+        merge_potential_score * weights['merge_potential']
     )
 
     return combined_score
@@ -239,7 +264,7 @@ def HeuristicStrategy(grid, heuristic_name):
     else:
         # If no moves change the grid, return a random valid action
         return random.choice(actions)
-    
+
 
 def expectimax(grid, depth, heuristic_func):
     """
@@ -293,10 +318,12 @@ def HeuristicStrategyWithLookahead(grid, heuristic_name, depth=2):
         "smoothness": smoothness_heuristic,
         "merge-potential": merge_potential_heuristic,
         "corner-max-tile": corner_max_tile_heuristic,
-        "combined": combined_heuristic
+        "combined": combined_heuristic,
+        "advanced": enhanced_combined_heuristic
     }
 
     heuristic_func = heuristic_functions.get(heuristic_name)
+    print("HEURISTIC FUNC", heuristic_func)
     if heuristic_func is None:
         raise ValueError(f"Unknown heuristic: {heuristic_name}")
 
@@ -313,7 +340,10 @@ def HeuristicStrategyWithLookahead(grid, heuristic_name, depth=2):
 
     return best_action if best_action else random.choice(actions)
 
+
 # Policy Network Definition
+
+
 class PolicyNetwork(nn.Module):
     def __init__(self, input_size, output_size, hidden_sizes, activation_fn=nn.ReLU):
         super(PolicyNetwork, self).__init__()
@@ -336,7 +366,8 @@ class PolicyGradientStrategy:
         self.actions = ['up', 'down', 'left', 'right']
         self.policy_net = PolicyNetwork(
             input_size=16, output_size=4, hidden_sizes=hidden_sizes, activation_fn=activation_fn)
-        self.optimizer = optimizer_cls(self.policy_net.parameters(), lr=learning_rate)
+        self.optimizer = optimizer_cls(
+            self.policy_net.parameters(), lr=learning_rate)
         self.gamma = gamma  # Discount factor
         self.entropy_coef = entropy_coef  # Coefficient for entropy regularization
         self.saved_log_probs = []
@@ -369,7 +400,8 @@ class PolicyGradientStrategy:
             advantage = R - baseline
             policy_loss.append(-log_prob * advantage)
         # Entropy regularization
-        entropy_loss = -self.entropy_coef * torch.stack(self.saved_log_probs).mean()
+        entropy_loss = -self.entropy_coef * \
+            torch.stack(self.saved_log_probs).mean()
         self.optimizer.zero_grad()
         loss = torch.stack(policy_loss).sum() + entropy_loss
         loss.backward()
@@ -380,3 +412,223 @@ class PolicyGradientStrategy:
 
     def __call__(self, grid):
         return self.select_action(grid)
+
+
+### Monte Carlo Tree Search (MCTS) ###
+
+
+def enhanced_combined_heuristic(grid):
+    """
+    Evaluates the grid by combining multiple heuristics into a single score with an added penalty for losing.
+
+    The combined score is calculated as a weighted sum of the individual heuristic scores. This function also includes
+    a penalty if the game is lost, which helps to discourage moves that could lead to losing the game.
+
+    Returns:
+    - A numerical value representing the combined heuristic score, where a higher value is better.
+    """
+    # Calculate individual heuristic scores
+    empty_cells_score = len(grid.retrieve_empty_cells())
+    monotonicity_score = monotonicity_heuristic(grid)
+    merge_potential_score = merge_potential_heuristic(grid)
+    corner_max_tile_score = corner_max_tile_heuristic(grid)
+    smoothness_score = smoothness_heuristic(grid)
+    homogeneity_score = homogeneity_heuristic(grid)
+
+    # Weights for each heuristic (adjust these weights based on experimentation)
+    weights = {
+        'monoticity': 15,
+        'homogeneity': 10,
+    }
+
+    # Combined heuristic score
+    combined_score = (
+        homogeneity_score * weights['homogeneity']
+        + monotonicity_score * weights['monoticity']
+    )
+
+    # Penalty for losing the game
+    if not grid.can_merge() and not grid.retrieve_empty_cells():
+        combined_score -= 10000  # Large penalty for a losing state
+
+    return combined_score
+
+
+def expectimax_1(grid, depth, heuristic_func):
+    if depth == 0 or not grid.can_merge() and not grid.has_empty_cells():
+        return heuristic_func(grid)
+
+    # Player's turn: Maximize score
+    if depth % 2 == 0:
+        best_score = float('-inf')
+        for action in ['up', 'down', 'left', 'right']:
+            grid_copy = grid.clone()
+            moved = grid_copy.move(action)
+            if moved:
+                # Simulate random tile insertion
+                empty_cells = grid_copy.retrieve_empty_cells()
+                total_score = 0
+                for cell in empty_cells:
+                    for value, probability in [(1, 0.9 / len(empty_cells)), (2, 0.1 / len(empty_cells))]:
+                        grid_after_chance = grid_copy.clone()
+                        grid_after_chance.place_tile(cell, value)
+                        score = expectimax_1(
+                            grid_after_chance, depth - 1, heuristic_func)
+                        total_score += probability * score
+                best_score = max(best_score, total_score)
+        return best_score
+
+    # Chance node: Expected value over all possible tile spawns
+    else:
+        empty_cells = grid.retrieve_empty_cells()
+        total_score = 0
+        for cell in empty_cells:
+            for value, probability in [(1, 0.9 / len(empty_cells)), (2, 0.1 / len(empty_cells))]:
+                grid_copy = grid.clone()
+                grid_copy.place_tile(cell, value)
+                score = expectimax_1(grid_copy, depth - 1, heuristic_func)
+                total_score += probability * score
+        return total_score
+
+
+def expectimax_pruned(grid, depth, heuristic_func, max_actions=2, max_chance_events=4, transposition_table=None):
+    if transposition_table is None:
+        transposition_table = {}
+
+    # Create a unique key for the current grid state
+    grid_key = tuple(tuple(row) for row in grid.cells)
+    if grid_key in transposition_table and depth <= transposition_table[grid_key]['depth']:
+        return transposition_table[grid_key]['score']
+
+    if depth == 0 or not grid.can_merge() and not grid.has_empty_cells():
+        score = heuristic_func(grid)
+        transposition_table[grid_key] = {'score': score, 'depth': depth}
+        return score
+
+    # Player's turn: Maximize score
+    if depth % 2 == 0:
+        best_score = float('-inf')
+
+        # Evaluate and order actions
+        actions = []
+        for action in ['up', 'down', 'left', 'right']:
+            grid_copy = grid.clone()
+            moved = grid_copy.move(action)
+            if moved:
+                action_score = heuristic_func(grid_copy)
+                actions.append((action_score, action, grid_copy))
+
+        # Sort actions by heuristic score (descending)
+        actions.sort(reverse=True, key=lambda x: x[0])
+
+        # Limit the number of actions considered
+        actions = actions[:max_actions]
+
+        for _, action, grid_copy in actions:
+            # Simulate random tile insertion
+            empty_cells = grid_copy.retrieve_empty_cells()
+            if not empty_cells:
+                continue
+            total_score = 0
+            chance_events = []
+            for cell in empty_cells:
+                chance_events.append(
+                    (cell, 1, 0.9 / len(empty_cells)))  # '2' tile
+                chance_events.append(
+                    (cell, 2, 0.1 / len(empty_cells)))  # '4' tile
+
+            # Limit the number of chance events considered
+            if len(chance_events) > max_chance_events:
+                chance_events = random.sample(chance_events, max_chance_events)
+                # Normalize probabilities
+                total_probability = sum(
+                    probability for _, _, probability in chance_events)
+                chance_events = [(cell, value, probability / total_probability)
+                                 for cell, value, probability in chance_events]
+
+            for cell, value, probability in chance_events:
+                grid_after_chance = grid_copy.clone()
+                grid_after_chance.place_tile(cell, value)
+                score = expectimax_pruned(
+                    grid_after_chance, depth - 1, heuristic_func, max_actions, max_chance_events, transposition_table)
+                total_score += probability * score
+            best_score = max(best_score, total_score)
+        transposition_table[grid_key] = {'score': best_score, 'depth': depth}
+        return best_score
+
+    # Chance node: Expected value over all possible tile spawns
+    else:
+        empty_cells = grid.retrieve_empty_cells()
+        if not empty_cells:
+            return heuristic_func(grid)
+        total_score = 0
+        chance_events = []
+        for cell in empty_cells:
+            chance_events.append((cell, 1, 0.9 / len(empty_cells)))  # '2' tile
+            chance_events.append((cell, 2, 0.1 / len(empty_cells)))  # '4' tile
+
+        # Limit the number of chance events considered
+        if len(chance_events) > max_chance_events:
+            chance_events = random.sample(chance_events, max_chance_events)
+            # Normalize probabilities
+            total_probability = sum(
+                probability for _, _, probability in chance_events)
+            chance_events = [(cell, value, probability / total_probability)
+                             for cell, value, probability in chance_events]
+
+        for cell, value, probability in chance_events:
+            grid_copy = grid.clone()
+            grid_copy.place_tile(cell, value)
+            score = expectimax_pruned(
+                grid_copy, depth - 1, heuristic_func, max_actions, max_chance_events, transposition_table)
+            total_score += probability * score
+        transposition_table[grid_key] = {'score': total_score, 'depth': depth}
+        return total_score
+
+
+def MCTSStrategy(grid, heuristic=None, iterations=50, exploration_weight=2, expectimax_depth=1):
+    root = MCTSNode(grid, parent=None, action=None)
+    for _ in range(iterations):
+        node = root
+
+        # Selection
+        while not node.is_terminal_node() and node.is_fully_expanded():
+            node = node.best_child(exploration_weight)
+
+        # Expansion
+        if not node.is_terminal_node():
+            action = node.untried_actions.pop()
+            grid_copy = node.grid.clone()
+            moved = grid_copy.move(action)
+            if moved:
+                grid_copy.random_cell()
+                # Simulate random tile insertion (chance node)
+                child = MCTSNode(grid_copy, parent=node, action=action)
+                node.children.append(child)
+                node = child  # Move to the new child node
+
+        # Simulation using Expectimax
+        simulation_grid = node.grid.clone()
+        if heuristic:
+            heuristic_func = enhanced_combined_heuristic
+            # Use Expectimax to evaluate the expected utility
+            score = expectimax_pruned(
+                simulation_grid, expectimax_depth, heuristic_func)
+        else:
+            # If no heuristic is provided, use the current score
+            score = simulation_grid.current_score
+
+        # Backpropagation
+        while node is not None:
+            node.visits += 1
+            node.total_score += score
+            node = node.parent
+
+    # Select the best action
+    print("GRID", grid.print_grid())
+    print("ROOT CHILDREN SCORES", [
+        (child.action, child.total_score / child.visits) for child in root.children])
+    best_action = max(
+        root.children, key=lambda child: child.total_score / child.visits).action
+    print("BEST ACTION", best_action)
+    return best_action

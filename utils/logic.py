@@ -18,6 +18,18 @@ class Grid:
         self.moved = False
         self.current_score = 0
 
+    def print_grid(self):
+        print('-' * 40)
+        for i in range(self.size):
+            for j in range(self.size):
+                if self.cells[i][j] == 0:
+                    print('0\t', end='')
+                else:
+                    # Use bit shift to get actual value
+                    print(f'{1 << self.cells[i][j]}\t', end='')
+            print()
+        print('-' * 40)
+
     def random_cell(self):
         cell = random.choice(self.retrieve_empty_cells())
         i, j = cell
@@ -145,7 +157,11 @@ class Grid:
             return False
         return self.moved
 
+    def can_move(self):
+        return self.has_empty_cells() or self.can_merge()
+
     # Implement the movement methods within the Grid class
+
     def up(self):
         self.transpose()
         self.left_compress()
@@ -402,7 +418,7 @@ class Game:
             return self.grid.current_score
 
         if self.strategy_function:
-            if self.heuristic and self.strategy_function.__code__.co_argcount == 2:
+            if self.heuristic and self.strategy_function.__code__.co_argcount >= 2:
                 action = self.strategy_function(self.grid, self.heuristic)
             else:
                 action = self.strategy_function(self.grid)
