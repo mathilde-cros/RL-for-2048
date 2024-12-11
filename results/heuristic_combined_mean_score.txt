@@ -1,2 +1,2 @@
-Mean score over 50 runs: 18914.96 
-Best score reached over 50 runs: 36688
+Mean score over 100 runs: 3695.68 
+Best score reached over 100 runs: 7328

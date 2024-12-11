@@ -123,18 +123,6 @@ class Grid:
     def set_cells(self, cells):
         self.cells = cells
 
-    def print_grid(self):
-        print('-' * 40)
-        for i in range(self.size):
-            for j in range(self.size):
-                if self.cells[i][j] == 0:
-                    print('0\t', end='')
-                else:
-                    # Use bit shift to get actual value
-                    print(f'{1 << self.cells[i][j]}\t', end='')
-            print()
-        print('-' * 40)
-
     def clone(self):
         '''Create a deep copy of the grid.'''
         new_grid = Grid(self.size)

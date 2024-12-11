@@ -4,7 +4,7 @@ from utils.helpers import MCTSNode
 ### Monte Carlo Tree Search (MCTS) ###
 
 
-def MCTSStrategy(grid, iterations=50, simulation_depth=200, exploration_weight=0.4):
+def MCTSStrategy(grid, heuristic, iterations=50, simulation_depth=50, exploration_weight=1):
     root = MCTSNode(grid)
 
     for _ in range(iterations):
@@ -38,7 +38,7 @@ def MCTSStrategy(grid, iterations=50, simulation_depth=200, exploration_weight=0
                 simulation_grid.random_cell()
 
         # Backpropagation
-        if True:
+        if False:
             heuristic_fct = combined_heuristic
             score = heuristic_fct(simulation_grid)
         else:
@@ -50,13 +50,13 @@ def MCTSStrategy(grid, iterations=50, simulation_depth=200, exploration_weight=0
             node = node.parent
 
     # print for each child the number of visits
-    for child in root.children:
-        print(f"Action: {child.action}, Visits: {child.visits}")
+    # for child in root.children:
+    #     print(f"Action: {child.action}, Visits: {child.visits}")
 
-    # print score for each child
-    for child in root.children:
-        print(
-            f"Action: {child.action}, Score: {child.total_score / child.visits}")
+    # # print score for each child
+    # for child in root.children:
+    #     print(
+    #         f"Action: {child.action}, Score: {child.total_score / child.visits}")
     # Choose the best action based on average score
     best_action = max(
         root.children, key=lambda child: child.total_score / child.visits

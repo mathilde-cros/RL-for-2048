@@ -1,5 +1,6 @@
 import random
 from algorithms.heuristics import empty_cell_heuristic, snake_heuristic, monotonicity_heuristic, smoothness_heuristic, merge_potential_heuristic, corner_max_tile_heuristic, combined_heuristic
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -11,7 +12,6 @@ def RandomStrategy(grid):
 
     This strategy does not consider the state of the grid and is used as a baseline.
     """
-    print(grid.cells)
     actions = ['up', 'down', 'left', 'right']
     return random.choice(actions)
 

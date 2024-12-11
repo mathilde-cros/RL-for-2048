@@ -1,7 +1,7 @@
 from utils.helpers import get_args
 from utils.logic import Grid, GamePanel, Game, DummyPanel
 from algorithms.mcts import MCTSStrategy
-from algorithms.algorithms import RandomStrategy, HeuristicStrategyWithLookahead, PolicyGradientStrategy
+from algorithms.algorithms import RandomStrategy, HeuristicStrategyWithLookahead, PolicyGradientStrategy, HeuristicStrategy
 import os
 import itertools
 from torch import nn, optim
@@ -153,6 +153,8 @@ if __name__ == "__main__":
     if args.algo == "random":
         strategy = RandomStrategy
     elif args.algo == "heuristic":
+        strategy = HeuristicStrategy
+    elif args.algo == "heuristic_lookahead":
         strategy = HeuristicStrategyWithLookahead
     elif args.algo == "mcts":
         strategy = MCTSStrategy
