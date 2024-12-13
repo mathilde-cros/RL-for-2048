@@ -4,7 +4,7 @@ import numpy as np
 
 description = "2048 Game CLI"
 algo_list = ["random", "heuristic",
-             "heuristic_lookahead", "policy_gradient", "mcts"]
+             "heuristic_lookahead", "policy_gradient", "mcts", "mcts_expert", "expert_agent", "mcts_heuristic"]
 heuristic_list = ["empty-cells", "snake",
                   "monotonic", "smoothness", "merge-potential", "corner-max-tile", "combined", "advanced"]
 
@@ -20,13 +20,15 @@ def get_args():
         "--delay", type=int, default=100, help="delay between moves"
     )
 
+    parser.add_argument("--grid_search_mcts", action="store_true", default=False,
+                        help="Perform grid search over hyperparameters for MCTS")
     parser.add_argument('--gui', action='store_true',
                         help='Enable GUI', default=False)
     parser.add_argument('--runs', type=int, default=1,
                         help='Number of runs for simulation')
 
     parser.add_argument('--heuristic', choices=heuristic_list,
-                        required=False, default=heuristic_list[0])
+                        required=False, default=None)
 
     parser.add_argument('--grid_search', action='store_true',
                         help='Perform grid search over hyperparameters', default=False)

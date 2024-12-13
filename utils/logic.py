@@ -148,6 +148,15 @@ class Grid:
     def can_move(self):
         return self.has_empty_cells() or self.can_merge()
 
+    def can_move_action(self, action):
+        if action not in ['up', 'down', 'left', 'right']:
+            return False
+
+        # Clone the grid and attempt the move
+        cloned_grid = self.clone()
+        moved = cloned_grid.move(action)
+
+        return moved
     # Implement the movement methods within the Grid class
 
     def up(self):
@@ -336,7 +345,7 @@ class DummyPanel:
 class Game:
     '''The main game class which is the controller of the whole game.'''
 
-    def __init__(self, grid, panel, strategy_function=None, delay=200, use_gui=True, heuristic=None):
+    def __init__(self, grid, panel, strategy_function=None, delay=200, use_gui=True, heuristic=None, model=None, iterations=50, simulation_depth=100, exploration_weight=1, grid_search=False):
         self.grid = grid
         self.panel = panel
         self.start_cells_num = 2
@@ -344,12 +353,18 @@ class Game:
         self.won = False
         self.keep_playing = False
         self.strategy_function = strategy_function
-        self.strategy_instance = strategy_function  # Store it explicitly
+        self.strategy_instance = strategy_function
         self.valid_actions = ['up', 'down', 'left', 'right']
         self.delay = delay
         self.use_gui = use_gui
         self.heuristic = heuristic
         self.previous_score = 0
+        self.model = model
+        self.iterations = iterations
+        self.simulation_depth = simulation_depth
+        self.exploration_weight = exploration_weight
+        self.grid_search = grid_search
+        self.number_moves = 0
 
     def is_game_terminated(self):
         return self.over or (self.won and (not self.keep_playing))
@@ -365,7 +380,7 @@ class Game:
             # Start the game loop without GUI
             while not self.is_game_terminated():
                 self.auto_play()
-            return self.grid.current_score
+            return (self.grid.current_score, self.number_moves)
 
     def add_start_cells(self):
         for _ in range(self.start_cells_num):
@@ -402,11 +417,24 @@ class Game:
             self.strategy_instance.rewards.append(reward)
 
     def auto_play(self):
+        self.number_moves += 1
         if self.is_game_terminated():
             return self.grid.current_score
 
         if self.strategy_function:
-            if self.heuristic and self.strategy_function.__code__.co_argcount >= 2:
+            if self.grid_search:
+                action = self.strategy_function(
+                    self.grid, self.heuristic, self.iterations, self.simulation_depth, self.exploration_weight)
+            elif self.strategy_function.__name__ == 'MCTSExpertStrategy':
+                action = self.strategy_function(
+                    self.grid, self.model, self.heuristic)
+            elif self.strategy_function.__name__ == 'ExpertAgent':
+                if not self.model:
+                    return 'No model found'
+                action = self.strategy_function(self.grid, self.model)
+            elif self.strategy_function.__name__ == "MCTSStrategyHeuristic":
+                action = self.strategy_function(self.grid, self.heuristic)
+            elif self.heuristic and self.strategy_function.__code__.co_argcount >= 2:
                 action = self.strategy_function(self.grid, self.heuristic)
             else:
                 action = self.strategy_function(self.grid)
@@ -415,7 +443,6 @@ class Game:
                 return
         else:
             action = random.choice(self.valid_actions)
-
         self.move(action)
 
         if self.use_gui:
