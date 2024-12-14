@@ -1,6 +1,9 @@
+import time
+from algorithms.expert_agent import ExpertAgent, load_expert_agent
+from utils.grid_search import run_grid_search_mcts
 from utils.helpers import get_args
 from utils.logic import Grid, GamePanel, Game, DummyPanel
-from algorithms.mcts import MCTSStrategy
+from algorithms.mcts import MCTSStrategy, MCTSExpertStrategy, MCTSStrategyHeuristic
 from algorithms.algorithms import RandomStrategy, HeuristicStrategyWithLookahead, PolicyGradientStrategy, HeuristicStrategy
 import os
 import itertools
@@ -8,7 +11,7 @@ from torch import nn, optim
 
 
 class Game2048:
-    def __init__(self, strategy, delay, size=4, use_gui=True, heuristic=None, strategy_params=None):
+    def __init__(self, strategy, delay, size=4, use_gui=True, heuristic=None, strategy_params=None, model=None):
         self.size = size
         self.grid = Grid(size)
         self.use_gui = use_gui
@@ -21,6 +24,7 @@ class Game2048:
         self.heuristic = heuristic
         self.strategy_params = strategy_params
         self.strategy_instance = None
+        self.model = model
 
     def start(self):
         if isinstance(self.strategy, type):  # Check if it's a class, not an instance
@@ -33,7 +37,8 @@ class Game2048:
             strategy_function=self.strategy_instance,
             delay=self.delay,
             use_gui=self.use_gui,
-            heuristic=self.heuristic
+            heuristic=self.heuristic,
+            model=self.model
         )
         result = game_instance.start()
         # Retrieve the updated strategy instance
@@ -148,8 +153,11 @@ if __name__ == "__main__":
     if args.grid_search:
         grid_search(args)
 
+    if args.grid_search_mcts:
+        run_grid_search_mcts(args)
+        exit(0)
     runs = args.runs
-
+    model = None
     if args.algo == "random":
         strategy = RandomStrategy
     elif args.algo == "heuristic":
@@ -158,9 +166,16 @@ if __name__ == "__main__":
         strategy = HeuristicStrategyWithLookahead
     elif args.algo == "mcts":
         strategy = MCTSStrategy
-
+    elif args.algo == "mcts_heuristic":
+        strategy = MCTSStrategyHeuristic
+    elif args.algo == "mcts_expert":
+        strategy = MCTSExpertStrategy
+        model = load_expert_agent()
     elif args.algo == "policy_gradient":
         strategy = PolicyGradientStrategy()
+    elif args.algo == "expert_agent":
+        strategy = ExpertAgent
+        model = load_expert_agent()
     else:
 
         print(f"Unknown algorithm: {args.algo}")
@@ -168,18 +183,30 @@ if __name__ == "__main__":
 
     heuristic = args.heuristic
     scores = []
+    average_time = []
+    average_move_per_second = []
     for i in range(runs):
         print(f"Running game number {i+1}")
         game = Game2048(strategy, delay=args.delay,
-                        use_gui=use_gui, heuristic=heuristic)
-        result = game.start()
+                        use_gui=use_gui, heuristic=heuristic, model=model)
+        start_time = time.time()
+        result, number_moves = game.start()
+        end_time = time.time()
+        time_taken = end_time - start_time
+        average_time.append(time_taken)
         scores.append(result)
+        average_move_per_second.append(number_moves / time_taken)
         print("RESULT:", result)
-        if runs > 1:
-            mean_score = sum(scores) / len(scores)
-            print(f"Mean score over {runs} runs: {mean_score}")
-            print(f"Best score reached over {runs} runs: {max(scores)}")
-            save_path = f'./results/{args.algo}_{heuristic}_mean_score.txt' if args.algo == "heuristic" else f'./results/{args.algo}_mean_score.txt'
-            with open(save_path, 'w') as f:
-                f.write(f"Mean score over {runs} runs: {mean_score} \n")
-                f.write(f"Best score reached over {runs} runs: {max(scores)}")
+        print("Time taken:", time_taken)
+    if runs > 1:
+        mean_time = sum(average_time) / len(average_time)
+        mean_score = sum(scores) / len(scores)
+        print(f"Mean score over {runs} runs: {mean_score}")
+        print(f"Best score reached over {runs} runs: {max(scores)}")
+        save_path = f'./results/{args.algo}_{heuristic}_mean_score.txt' if args.algo == "heuristic" else f'./results/{args.algo}_mean_score.txt'
+        with open(save_path, 'w') as f:
+            f.write(f"Mean score over {runs} runs: {mean_score} \n")
+            f.write(f"Best score reached over {runs} runs: {max(scores)} \n")
+            f.write(f"Mean time taken over {runs} runs: {mean_time} \n")
+            f.write(
+                f"Mean moves per second over {runs} runs: {sum(average_move_per_second) / len(average_move_per_second)} \n")
