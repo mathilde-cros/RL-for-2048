@@ -6,31 +6,45 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # We created this alternative module to integrate pre-trained agent's weights into the policy gradient algorithm
-class PolicyNetwork(nn.Module):
-    def __init__(self, input_size, output_size, hidden_sizes, activation_fn=nn.ReLU):
-        super(PolicyNetwork, self).__init__()
-        layers = []
-        last_size = input_size
-        for hidden_size in hidden_sizes:
-            layers.append(nn.Linear(last_size, hidden_size))
-            layers.append(activation_fn())
-            last_size = hidden_size
-        layers.append(nn.Linear(last_size, output_size))
-        self.model = nn.Sequential(*layers)
+class PolicyNetworkCNN(nn.Module):
+    def __init__(self):
+        super(PolicyNetworkCNN, self).__init__()
+        self.conv_layers = nn.Sequential(
+            nn.Conv2d(1, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+            nn.Conv2d(128, 256, kernel_size=3, padding=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(),
+        )
+
+        self.fc_layers = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(256 * 4 * 4, 512),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(512, 128),
+            nn.ReLU(),
+            nn.Linear(128, 4)
+        )
 
     def forward(self, x):
-        return torch.softmax(self.model(x), dim=-1)
+        x = self.conv_layers(x)
+        x = self.fc_layers(x)
+        return x
 
     def load_pretrained_weights(self, weights):
         """Load pretrained weights into the network."""
-        self.model.load_state_dict(weights)
+        self.load_state_dict(weights)
 
 
 class PolicyGradientStrategy:
     def __init__(self, hidden_sizes=[128], learning_rate=1e-3, activation_fn=nn.ReLU, optimizer_cls=optim.Adam, gamma=0.99, entropy_coef=0.0):
         self.actions = ['up', 'down', 'left', 'right']
-        self.policy_net = PolicyNetwork(
-            input_size=16, output_size=4, hidden_sizes=hidden_sizes, activation_fn=activation_fn)
+        self.policy_net = PolicyNetworkCNN()
         self.optimizer = optimizer_cls(
             self.policy_net.parameters(), lr=learning_rate)
         self.gamma = gamma 
@@ -39,13 +53,13 @@ class PolicyGradientStrategy:
         self.rewards = []
 
     def preprocess_grid(self, grid):
-        state = np.array(grid.cells, dtype=np.float32).flatten()
-        state = np.log2(state + 1) / 16
+        state = np.array(grid.cells, dtype=np.float32).reshape(1, 1, 4, 4)
         return torch.tensor(state, dtype=torch.float32)
 
     def select_action(self, grid):
         state = self.preprocess_grid(grid)
-        action_probs = self.policy_net(state)
+        action_logits = self.policy_net(state)
+        action_probs = torch.softmax(action_logits, dim=-1)
         m = torch.distributions.Categorical(action_probs)
         action = m.sample()
         self.saved_log_probs.append(m.log_prob(action))
@@ -116,7 +130,7 @@ class ExperimentPolicyGradient:
             "Configuration": [str(config) for config in results.keys()],
             "Average Score": list(results.values())
         })
-        results_df.to_csv("../results/policy_gradient_experiment_results.csv", index=False)
+        results_df.to_csv("./results/policy_gradient_experiment_results.csv", index=False)
         print("Results saved to policy_gradient_experiment_results.csv in the results folder")
 
         # Visualize results
@@ -130,7 +144,7 @@ class ExperimentPolicyGradient:
         plt.title("Performance vs Network Configuration")
         plt.xticks(rotation=45)
         plt.tight_layout()
-        plt.savefig("../results/policy_gradient_experiment_results.png")
+        plt.savefig("./results/policy_gradient_experiment_results.png")
         plt.show()
         print("Results visualized and saved as policy_gradient_experiment_results.png in the results folder")
 
@@ -142,11 +156,11 @@ if __name__ == "__main__":
     # We define the grid environment to be the pretrained expert agent (NEEDS TO BE REPLACED)
     grid_environment = None
 
-    pretrained_weights_path = "../data/policy_network.pth" # A RUN DU FILE TRAIN_POLICY_NETWORK.PY!
-    pretrained_model = PolicyNetwork(input_size=16, output_size=4, hidden_sizes=[128])
+    pretrained_weights_path = "./data/policy_network_best.pth"
+    pretrained_model = PolicyNetworkCNN()
     pretrained_model.load_state_dict(torch.load(pretrained_weights_path))
 
-    strategy = PolicyGradientStrategy(hidden_sizes=[128], learning_rate=1e-3)
+    strategy = PolicyGradientStrategy()
     strategy.load_pretrained_policy(pretrained_model.state_dict())
 
     experiment = ExperimentPolicyGradient()
