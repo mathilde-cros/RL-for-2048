@@ -24,16 +24,13 @@ def ExpertAgent(grid, model):
     """
     action = neural_network_policy(model, grid)
 
-    # Check if the neural network's suggested action is valid
     if grid.can_move_action(action):
         return action
     else:
-        # Retry until a valid action is found
         valid_actions = ['up', 'down', 'left', 'right']
-        random.shuffle(valid_actions)  # Shuffle to avoid bias
+        random.shuffle(valid_actions)
         for act in valid_actions:
             if grid.can_move_action(act):
                 return act
 
-    # If no valid actions are available (shouldn't happen), return None
     return None

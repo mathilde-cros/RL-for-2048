@@ -82,10 +82,8 @@ def smoothness_heuristic(grid):
         for j in range(grid.size):
             value = grid.cells[i][j]
             if value != 0:
-                # Compare with right neighbor
                 if j + 1 < grid.size and grid.cells[i][j + 1] != 0:
                     smoothness -= abs(value - grid.cells[i][j + 1])
-                # Compare with bottom neighbor
                 if i + 1 < grid.size and grid.cells[i + 1][j] != 0:
                     smoothness -= abs(value - grid.cells[i + 1][j])
     return smoothness
@@ -105,10 +103,8 @@ def merge_potential_heuristic(grid):
         for j in range(grid.size):
             value = grid.cells[i][j]
             if value != 0:
-                # Check right neighbor
                 if j + 1 < grid.size and grid.cells[i][j + 1] == value:
                     merge_potential += 1
-                # Check bottom neighbor
                 if i + 1 < grid.size and grid.cells[i + 1][j] == value:
                     merge_potential += 1
     return merge_potential
@@ -133,7 +129,7 @@ def corner_max_tile_heuristic(grid):
     for x, y in corner_positions:
         if grid.cells[x][y] == max_tile:
             return max_tile
-    return -max_tile  # Penalize if the max tile is not in a corner
+    return -max_tile
 
 
 def homogeneity_heuristic(grid):
@@ -150,14 +146,12 @@ def homogeneity_heuristic(grid):
         for j in range(grid.size):
             value = grid.cells[i][j]
             if value != 0:
-                # Compare with right neighbor
                 if j + 1 < grid.size and grid.cells[i][j + 1] != 0:
                     homogeneity_score -= abs(value - grid.cells[i][j + 1])
-                # Compare with bottom neighbor
                 if i + 1 < grid.size and grid.cells[i + 1][j] != 0:
                     homogeneity_score -= abs(value - grid.cells[i + 1][j])
 
-    # A higher score is better, so we return the negative of the differences
+    # q higher score is better, so we return the negative of the differences
     return -homogeneity_score
 
 
@@ -171,12 +165,10 @@ def combined_heuristic(grid):
     Returns:
     - A numerical value representing the combined heuristic score.
     """
-    # Calculate individual heuristic scores
     empty_cells_score = len(grid.retrieve_empty_cells())
     monotonicity_score = monotonicity_heuristic(grid)
     merge_potential_score = merge_potential_heuristic(grid)
     corner_max_tile_score = corner_max_tile_heuristic(grid)
-    # Weights for each heuristic (adjust these weights based on experimentation)
     weights = {
         'empty_cells': 300,
         'monotonicity': 500,
@@ -228,7 +220,7 @@ def test():
     ]
 
     heuristic = combined_heuristic
-    print("INITIAL SCORE", heuristic(grid))  # Expected output: 0
+    print("INITIAL SCORE", heuristic(grid))
 
     grid.cells = [
         [0, 0, 0, 0],
@@ -238,7 +230,7 @@ def test():
     ]
 
     heuristic = combined_heuristic
-    print("SCORE", heuristic(grid))  # Expected output: 0
+    print("SCORE", heuristic(grid))
 
     grid.cells = [
         [1, 4, 1, 1],
@@ -248,4 +240,4 @@ def test():
     ]
 
     heuristic = combined_heuristic
-    print("SCORE2", heuristic(grid))  # Expected output: 0
+    print("SCORE2", heuristic(grid))

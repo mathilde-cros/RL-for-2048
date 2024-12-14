@@ -34,7 +34,6 @@ def HeuristicStrategy(grid, heuristic_name):
     best_score = -float('inf')
     best_action = None
 
-    # Mapping of heuristic names to functions
     heuristic_functions = {
         "empty-cells": empty_cell_heuristic,
         "snake": snake_heuristic,
@@ -50,14 +49,13 @@ def HeuristicStrategy(grid, heuristic_name):
         raise ValueError(f"Unknown heuristic: {heuristic_name}")
 
     for action in actions:
-        # Clone the grid to simulate the move
         grid_copy = grid.clone()
         moved = grid_copy.move(action)
 
         if not moved:
-            continue  # Skip if the move doesn't change the grid
+            continue
 
-        # Evaluate the new grid using the selected heuristic
+        # evaluate the new grid using the selected heuristic
         score = heuristic_func(grid_copy)
 
         if score > best_score:
@@ -67,7 +65,7 @@ def HeuristicStrategy(grid, heuristic_name):
     if best_action:
         return best_action
     else:
-        # If no moves change the grid, return a random valid action
+        # if no moves change the grid, return a random valid action
         return random.choice(actions)
 
 
@@ -86,7 +84,6 @@ def expectimax(grid, depth, heuristic_func):
     if depth == 0 or not grid.can_merge():
         return heuristic_func(grid)
 
-    # Player's turn: Maximize score
     if depth % 2 == 1:
         best_score = -float('inf')
         for action in ['up', 'down', 'left', 'right']:
@@ -97,7 +94,6 @@ def expectimax(grid, depth, heuristic_func):
                 best_score = max(best_score, score)
         return best_score
 
-    # Random tile placement (chance node): Average score
     else:
         empty_cells = grid.retrieve_empty_cells()
         total_score = 0
@@ -168,8 +164,8 @@ class PolicyGradientStrategy:
             input_size=16, output_size=4, hidden_sizes=hidden_sizes, activation_fn=activation_fn)
         self.optimizer = optimizer_cls(
             self.policy_net.parameters(), lr=learning_rate)
-        self.gamma = gamma  # Discount factor
-        self.entropy_coef = entropy_coef  # Coefficient for entropy regularization
+        self.gamma = gamma
+        self.entropy_coef = entropy_coef
         self.saved_log_probs = []
         self.rewards = []
 
@@ -206,9 +202,11 @@ class PolicyGradientStrategy:
         loss = torch.stack(policy_loss).sum() + entropy_loss
         loss.backward()
         self.optimizer.step()
-        # Reset buffers
         self.saved_log_probs = []
         self.rewards = []
 
     def __call__(self, grid):
         return self.select_action(grid)
+
+    def __name__(self):
+        return "PolicyGradient"

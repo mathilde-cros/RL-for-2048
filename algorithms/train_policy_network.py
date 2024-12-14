@@ -26,7 +26,6 @@ def load_dataset(file_path):
 
     # Reshape for CNN
     X = X.reshape(-1, 1, 4, 4)
-    print(X)
     return X, y
 
 
@@ -61,14 +60,23 @@ class PolicyNetworkCNN(nn.Module):
     def __init__(self):
         super(PolicyNetworkCNN, self).__init__()
         self.conv_layers = nn.Sequential(
-            nn.Conv2d(1, 32, kernel_size=2),
+            nn.Conv2d(1, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
             nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=2),
+            nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+            nn.Conv2d(128, 256, kernel_size=3, padding=1),
+            nn.BatchNorm2d(256),
             nn.ReLU(),
         )
+
         self.fc_layers = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(64 * 2 * 2, 128),
+            nn.Linear(256 * 4 * 4, 512),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(512, 128),
             nn.ReLU(),
             nn.Linear(128, 4)
         )
@@ -90,7 +98,7 @@ def compute_class_weights(y_train):
     return class_weights
 
 
-def train_model(model, train_loader, val_loader, criterion, optimizer, scheduler, epochs=50, patience=5):
+def train_model(model, train_loader, val_loader, criterion, optimizer, scheduler, device, epochs=50, patience=5):
     """
     Train the model with optional early stopping.
     """
@@ -104,6 +112,9 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, scheduler
         total = 0
 
         for X_batch, y_batch in train_loader:
+            # Move data to the same device as the model
+            X_batch, y_batch = X_batch.to(device), y_batch.to(device)
+
             optimizer.zero_grad()
             outputs = model(X_batch)
             loss = criterion(outputs, y_batch)
@@ -125,6 +136,9 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, scheduler
         total = 0
         with torch.no_grad():
             for X_batch, y_batch in val_loader:
+                # Move data to the same device as the model
+                X_batch, y_batch = X_batch.to(device), y_batch.to(device)
+
                 outputs = model(X_batch)
                 loss = criterion(outputs, y_batch)
 
@@ -163,13 +177,17 @@ def main():
     # Prepare dataloaders
     train_loader, val_loader, y_train = prepare_dataloaders(X, y)
 
+    device = torch.device(
+        "mps") if torch.backends.mps.is_available() else torch.device("cpu")
+
+    print(f"Using device: {device}")
+
     # Initialize the model
-    model = PolicyNetworkCNN()
+    model = PolicyNetworkCNN().to(device)
 
     # Compute class weights for handling class imbalance
-    class_weights = compute_class_weights(y_train)
+    class_weights = compute_class_weights(y_train).to(device)
 
-    # Define the loss function with class weights
     criterion = nn.CrossEntropyLoss(weight=class_weights)
 
     # Define the optimizer and learning rate scheduler
@@ -178,7 +196,7 @@ def main():
 
     # Train the model
     train_model(model, train_loader, val_loader, criterion,
-                optimizer, scheduler, epochs=100, patience=5)
+                optimizer, scheduler, device, epochs=100, patience=5)
 
     # Load the best model
     model.load_state_dict(torch.load("data/policy_network_best.pth"))

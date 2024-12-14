@@ -7,8 +7,7 @@ import random
 
 
 class Grid:
-    '''The data structure representation of the 2048 game.
-    '''
+    """The Grid class represents the 2048 game grid."""
 
     def __init__(self, n):
         self.size = n
@@ -33,9 +32,9 @@ class Grid:
     def random_cell(self):
         cell = random.choice(self.retrieve_empty_cells())
         i, j = cell
-        # Exponent 1 represents 2 (since 1 << 1 == 2)
+        # exponent 1 represents 2 (since 1 << 1 == 2)
         self.cells[i][j] = 1 if random.random(
-        ) < 0.9 else 2  # Exponents 1 or 2
+        ) < 0.9 else 2
 
     def retrieve_empty_cells(self):
         empty_cells = []
@@ -84,16 +83,14 @@ class Grid:
         for i in range(self.size):
             for j in range(self.size - 1):
                 if self.cells[i][j] == self.cells[i][j + 1] and self.cells[i][j] != 0:
-                    self.cells[i][j] += 1  # Increment exponent
+                    self.cells[i][j] += 1
                     self.cells[i][j + 1] = 0
-                    # Update score: 1 shifted left by the new exponent
                     self.current_score += 1 << self.cells[i][j]
                     self.merged = True
 
     def found_2048(self):
         for i in range(self.size):
             for j in range(self.size):
-                # Exponent for 2048 (since 1 << 11 == 2048)
                 if self.cells[i][j] >= 11:
                     return True
         return False
@@ -124,7 +121,7 @@ class Grid:
         self.cells = cells
 
     def clone(self):
-        '''Create a deep copy of the grid.'''
+        """ Return a copy of the grid """
         new_grid = Grid(self.size)
         new_grid.cells = copy.deepcopy(self.cells)
         new_grid.current_score = self.current_score
@@ -151,13 +148,10 @@ class Grid:
     def can_move_action(self, action):
         if action not in ['up', 'down', 'left', 'right']:
             return False
-
-        # Clone the grid and attempt the move
         cloned_grid = self.clone()
         moved = cloned_grid.move(action)
 
         return moved
-    # Implement the movement methods within the Grid class
 
     def up(self):
         self.transpose()
@@ -193,7 +187,7 @@ class Grid:
 
 
 class GamePanel:
-    '''The GUI view class of the 2048 game showing via tkinter.'''
+    """The GamePanel class represents the GUI of the 2048 game."""
     CELL_PADDING = 10
     BACKGROUND_COLOR = '#92877d'
     EMPTY_CELL_COLOR = '#9e948a'
@@ -239,26 +233,21 @@ class GamePanel:
         self.root.title('2048')
         self.root.resizable(False, False)
 
-        # Load the best score from a file
         self.best_score = self.load_best_score()
 
-        # Create a frame for the score labels
         self.score_frame = tk.Frame(self.root)
         self.score_frame.pack()
 
-        # Label for the current score
         self.current_score_label = tk.Label(
             self.score_frame, text=f"Score: {self.grid.current_score}", font=('Verdana', 16)
         )
         self.current_score_label.pack(side=tk.LEFT, padx=10)
 
-        # Label for the best score
         self.best_score_label = tk.Label(
             self.score_frame, text=f"Best: {self.best_score}", font=('Verdana', 16)
         )
         self.best_score_label.pack(side=tk.LEFT, padx=10)
 
-        # Background frame for the grid
         self.background = tk.Frame(self.root, bg=GamePanel.BACKGROUND_COLOR)
         self.cell_labels = []
         for i in range(self.grid.size):
@@ -299,7 +288,7 @@ class GamePanel:
                         bg=GamePanel.EMPTY_CELL_COLOR
                     )
                 else:
-                    actual_value = 1 << exponent  # Calculate the actual value
+                    actual_value = 1 << exponent
                     cell_text = str(actual_value)
                     if actual_value > 2048:
                         bg_color = GamePanel.CELL_BACKGROUND_COLOR_DICT.get(
@@ -315,11 +304,9 @@ class GamePanel:
                         fg=fg_color
                     )
 
-        # Update the current score label
         self.current_score_label.configure(
             text=f"Score: {self.grid.current_score}")
 
-        # Update the best score if necessary
         if self.grid.current_score > self.best_score:
             self.best_score = self.grid.current_score
             self.best_score_label.configure(text=f"Best: {self.best_score}")
@@ -330,7 +317,7 @@ class GamePanel:
 
 
 class DummyPanel:
-    '''A dummy panel for headless mode without GUI.'''
+    """The DummyPanel class is a dummy panel for the game."""
 
     def __init__(self, grid):
         self.grid = grid
@@ -343,7 +330,7 @@ class DummyPanel:
 
 
 class Game:
-    '''The main game class which is the controller of the whole game.'''
+    """The Game class represents the 2048 game."""
 
     def __init__(self, grid, panel, strategy_function=None, delay=200, use_gui=True, heuristic=None, model=None, iterations=50, simulation_depth=100, exploration_weight=1, grid_search=False):
         self.grid = grid
@@ -373,11 +360,12 @@ class Game:
         self.add_start_cells()
         self.panel.paint()
         if self.use_gui:
-            # Start the auto-play loop with GUI
+            # start the auto-play loop with GUI
             self.panel.root.after(self.delay, self.auto_play)
             self.panel.root.mainloop()
+            return (self.grid.current_score, self.number_moves)
         else:
-            # Start the game loop without GUI
+            # start the game loop without GUI
             while not self.is_game_terminated():
                 self.auto_play()
             return (self.grid.current_score, self.number_moves)
@@ -391,7 +379,7 @@ class Game:
 
     def move(self, direction):
         moved = self.grid.move(direction)
-        reward = 0  # Initialize reward
+        reward = 0
 
         score_increase = self.grid.current_score - self.previous_score
         reward += score_increase
@@ -422,6 +410,7 @@ class Game:
             return self.grid.current_score
 
         if self.strategy_function:
+
             if self.grid_search:
                 action = self.strategy_function(
                     self.grid, self.heuristic, self.iterations, self.simulation_depth, self.exploration_weight)
@@ -446,7 +435,6 @@ class Game:
         self.move(action)
 
         if self.use_gui:
-            # Schedule the next move with GUI
             self.panel.root.after(self.delay, self.auto_play)
 
     def you_win(self):

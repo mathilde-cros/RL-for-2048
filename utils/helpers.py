@@ -4,7 +4,7 @@ import numpy as np
 
 description = "2048 Game CLI"
 algo_list = ["random", "heuristic",
-             "heuristic_lookahead", "policy_gradient", "mcts", "mcts_expert", "expert_agent", "mcts_heuristic"]
+             "heuristic_lookahead", "policy_gradient", "mcts", "mcts_expert",  "mcts_heuristic", "expert_agent"]
 heuristic_list = ["empty-cells", "snake",
                   "monotonic", "smoothness", "merge-potential", "corner-max-tile", "combined", "advanced"]
 

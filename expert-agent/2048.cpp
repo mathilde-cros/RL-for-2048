@@ -548,91 +548,17 @@ static board_t initial_board()
     return insert_tile_rand(board, draw_tile());
 }
 
-// Open a file for writing the dataset
-// std::ofstream dataset("../data/expert_policy_data.csv", std::ios::app);
-
-void play_game(get_move_func_t get_move, std::ofstream &dataset, int move_limit)
-{
-    board_t board = initial_board();
-    int scorepenalty = 0; // "penalty" for obtaining free 4 tiles
-    int move_count = 0;   // Initialize move counter
-
-    while (1)
-    {
-        int move;
-        board_t newboard;
-
-        // Check if maximum number of moves is reached
-        if (move_count >= move_limit)
-        {
-            printf("Reached move limit of %d moves. Ending game.\n", move_limit);
-            break;
-        }
-
-        // Check for possible moves
-        bool has_possible_move = false;
-        for (move = 0; move < 4; move++)
-        {
-            if (execute_move(move, board) != board)
-            {
-                has_possible_move = true;
-                break;
-            }
-        }
-        if (!has_possible_move)
-        {
-            printf("No more legal moves available. Ending game.\n");
-            break; // no legal moves
-        }
-
-        // Serialize board state as a string
-        std::ostringstream board_state;
-        board_state << std::hex << board;
-
-        // Get the expert move
-        move = get_move(board);
-        if (move < 0)
-            break;
-
-        // Save the state and action to the dataset
-        dataset << board_state.str() << "," << move << "\n";
-
-        newboard = execute_move(move, board);
-        if (newboard == board)
-        {
-            printf("Illegal move!\n");
-            continue;
-        }
-
-        board_t tile = draw_tile();
-        if (tile == 2)
-            scorepenalty += 4;
-        board = insert_tile_rand(newboard, tile);
-
-        move_count++; // Increment move counter
-    }
-
-    print_board(board);
-    printf("\nGame over. Your score is %.0f. The highest rank you achieved was %d.\n",
-           score_board(board) - scorepenalty, get_max_rank(board));
-}
-
-// Modify the main function
 int main()
 {
     init_tables();
 
-    // Set the number of games
-    const int num_games = 1000;
-
-    // Open a file for writing the dataset (append mode)
+    const int num_games = 100;
     std::ofstream dataset("../data/expert_policy_data_2048.csv", std::ios::app);
     if (!dataset.is_open())
     {
         return -1;
     }
 
-    // Add header to the dataset if the file is empty
     dataset.seekp(0, std::ios::end);
     if (dataset.tellp() == 0)
     {
@@ -652,14 +578,12 @@ int main()
             int move;
             board_t newboard;
 
-            // Check if the 2048 tile is reached
             if (get_max_rank(board) >= 11)
-            { // 2048 corresponds to rank 11 (2^11 = 2048)
+            {
                 printf("2048 tile reached. Ending game.\n");
                 break;
             }
 
-            // Check for possible moves
             bool has_possible_move = false;
             for (move = 0; move < 4; move++)
             {
@@ -675,16 +599,13 @@ int main()
                 break; // no legal moves
             }
 
-            // Serialize board state as a string
             std::ostringstream board_state;
             board_state << std::hex << board;
 
-            // Get the expert move
             move = find_best_move(board);
             if (move < 0)
                 break;
 
-            // Save the state and action to the dataset
             dataset << board_state.str() << "," << move << "\n";
 
             newboard = execute_move(move, board);
@@ -699,7 +620,7 @@ int main()
                 scorepenalty += 4;
             board = insert_tile_rand(newboard, tile);
 
-            move_count++; // Increment move counter
+            move_count++;
         }
 
         print_board(board);
@@ -707,6 +628,6 @@ int main()
                score_board(board) - scorepenalty, get_max_rank(board));
     }
 
-    dataset.close(); // Close the dataset file after all games are played
+    dataset.close();
     return 0;
 }
