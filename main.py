@@ -27,7 +27,7 @@ class Game2048:
         self.model = model
 
     def start(self):
-        if isinstance(self.strategy, type):  # Check if it's a class, not an instance
+        if isinstance(self.strategy, type):
             self.strategy_instance = self.strategy(**self.strategy_params)
         else:
             self.strategy_instance = self.strategy
@@ -94,7 +94,6 @@ def grid_search(args):
                 strategy_params=strategy_params
             )
             result = game.start()
-            # Access the strategy instance to train
             strategy_instance = game.strategy_instance
             if strategy_instance is not None:
                 strategy_instance.train()

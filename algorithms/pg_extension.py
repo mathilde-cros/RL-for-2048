@@ -6,6 +6,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # We created this alternative module to integrate pre-trained agent's weights into the policy gradient algorithm
+
+
 class PolicyNetworkCNN(nn.Module):
     def __init__(self):
         super(PolicyNetworkCNN, self).__init__()
@@ -37,7 +39,6 @@ class PolicyNetworkCNN(nn.Module):
         return x
 
     def load_pretrained_weights(self, weights):
-        """Load pretrained weights into the network."""
         self.load_state_dict(weights)
 
 
@@ -47,7 +48,7 @@ class PolicyGradientStrategy:
         self.policy_net = PolicyNetworkCNN()
         self.optimizer = optimizer_cls(
             self.policy_net.parameters(), lr=learning_rate)
-        self.gamma = gamma 
+        self.gamma = gamma
         self.entropy_coef = entropy_coef
         self.saved_log_probs = []
         self.rewards = []
@@ -79,7 +80,8 @@ class PolicyGradientStrategy:
             advantage = R - baseline
             policy_loss.append(-log_prob * advantage)
 
-        entropy_loss = -self.entropy_coef * torch.stack(self.saved_log_probs).mean()
+        entropy_loss = -self.entropy_coef * \
+            torch.stack(self.saved_log_probs).mean()
         self.optimizer.zero_grad()
         loss = torch.stack(policy_loss).sum() + entropy_loss
         loss.backward()
@@ -95,6 +97,8 @@ class PolicyGradientStrategy:
         return self.select_action(state)
 
 # In order to run a set of experiments with different configurations of the actor/critic network, we again defined a separate class to more efficiently automate the experiment running/testing
+
+
 class ExperimentPolicyGradient:
     def __init__(self, input_size=16, output_size=4, learning_rate=1e-3, gamma=0.99, entropy_coef=0.0):
         self.input_size = input_size
@@ -128,8 +132,10 @@ class ExperimentPolicyGradient:
             "Configuration": [str(config) for config in results.keys()],
             "Average Score": list(results.values())
         })
-        results_df.to_csv("./results/policy_gradient_experiment_results.csv", index=False)
-        print("Results saved to policy_gradient_experiment_results.csv in the results folder")
+        results_df.to_csv(
+            "./results/policy_gradient_experiment_results.csv", index=False)
+        print(
+            "Results saved to policy_gradient_experiment_results.csv in the results folder")
 
         # Visualize results
         configs = [str(config) for config in results.keys()]
@@ -148,8 +154,10 @@ class ExperimentPolicyGradient:
 
         return results
 
+
 if __name__ == "__main__":
-    hidden_layers_configs = [[64], [128], [256], [128, 128], [256, 128], [256, 256], [512, 256, 128], [512, 512, 256], [512, 512, 512], [1024, 512, 256], [1024, 1024, 512], [1024, 1024, 1024], [2048, 1024, 512], [2048, 2048, 1024], [2048, 2048, 2048], [4096, 2048, 1024], [4096, 4096, 2048], [4096, 4096, 4096], [8192, 4096, 2048], [8192, 8192, 4096], [8192, 8192, 8192], [16384, 8192, 4096], [16384, 16384, 8192], [16384, 16384, 16384], [32768, 16384, 8192], [32768, 32768, 16384], [32768, 32768, 32768], [65536, 32768, 16384], [65536, 65536, 32768], [65536, 65536, 65536], [131072, 65536, 32768], [131072, 131072, 65536], [131072, 131072, 131072], [262144, 131072, 65536], [262144, 262144, 131072], [262144, 262144, 262144], [524288, 262144, 131072], [524288, 524288, 262144], [524288, 524288, 524288], [1048576, 524288, 262144], [1048576, 1048576, 524288], [1048576, 1048576, 1048576]]
+    hidden_layers_configs = [[64], [128], [256], [128, 128], [256, 128], [256, 256], [512, 256, 128], [512, 512, 256], [512, 512, 512], [1024, 512, 256], [1024, 1024, 512], [1024, 1024, 1024], [2048, 1024, 512], [2048, 2048, 1024], [2048, 2048, 2048], [4096, 2048, 1024], [4096, 4096, 2048], [4096, 4096, 4096], [8192, 4096, 2048], [8192, 8192, 4096], [8192, 8192, 8192], [16384, 8192, 4096], [16384, 16384, 8192], [16384, 16384, 16384], [
+        32768, 16384, 8192], [32768, 32768, 16384], [32768, 32768, 32768], [65536, 32768, 16384], [65536, 65536, 32768], [65536, 65536, 65536], [131072, 65536, 32768], [131072, 131072, 65536], [131072, 131072, 131072], [262144, 131072, 65536], [262144, 262144, 131072], [262144, 262144, 262144], [524288, 262144, 131072], [524288, 524288, 262144], [524288, 524288, 524288], [1048576, 524288, 262144], [1048576, 1048576, 524288], [1048576, 1048576, 1048576]]
     num_trials = 10
 
     pretrained_weights_path = "./data/policy_network_best.pth"
