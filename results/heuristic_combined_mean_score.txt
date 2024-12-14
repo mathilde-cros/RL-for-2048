@@ -1,2 +1,4 @@
-Mean score over 100 runs: 3695.68 
-Best score reached over 100 runs: 7328
+Mean score over 100 runs: 3767.56 
+Best score reached over 100 runs: 8236 
+Mean time taken over 100 runs: 0.047831454277038575 
+Mean moves per second over 100 runs: 6524.5084551759555 

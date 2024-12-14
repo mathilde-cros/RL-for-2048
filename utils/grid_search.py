@@ -10,9 +10,9 @@ def run_grid_search_mcts(args):
     """Perform grid search over hyperparameters for MCTS."""
 
     param_grid = {
-        'iterations': [50,  200],
-        'simulation_depth': [50, 100],
-        'exploration_weight': [0.5, 1]
+        'iterations': [20, 50,  100, 150, 200],
+        'simulation_depth': [20, 50, 100, 200],
+        'exploration_weight': [0, 0.2, 0.5, 1, 1.2]
     }
 
     best_params = None

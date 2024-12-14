@@ -6,7 +6,7 @@ from utils.helpers import MCTSNode
 
 
 ### Monte Carlo Tree Search (MCTS) ###
-def MCTSStrategy(grid, heuristic=None, iterations=50, simulation_depth=50, exploration_weight=0.5):
+def MCTSStrategy(grid, heuristic=None, iterations=500, simulation_depth=50, exploration_weight=1):
     root = MCTSNode(grid)
 
     for _ in range(iterations):
@@ -140,7 +140,7 @@ def neural_network_policy(model, grid):
     return action_map[predicted_action_index]
 
 
-def MCTSExpertStrategy(grid, model, heuristic=None, iterations=50, simulation_depth=50, exploration_weight=0.5):
+def MCTSExpertStrategy(grid, model, heuristic=None, iterations=20, simulation_depth=20, exploration_weight=0.5):
     """
     Monte Carlo Tree Search strategy enhanced with neural network guidance
 

@@ -196,7 +196,7 @@ def main():
 
     # Train the model
     train_model(model, train_loader, val_loader, criterion,
-                optimizer, scheduler, device, epochs=100, patience=5)
+                optimizer, scheduler, device, epochs=20, patience=5)
 
     # Load the best model
     model.load_state_dict(torch.load("data/policy_network_best.pth"))
