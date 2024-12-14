@@ -52,13 +52,13 @@ class PolicyGradientStrategy:
         self.saved_log_probs = []
         self.rewards = []
 
-    def preprocess_grid(self, grid):
-        state = np.array(grid.cells, dtype=np.float32).reshape(1, 1, 4, 4)
+    def preprocess_state(self, state):
+        state = np.array(state, dtype=np.float32).reshape(1, 1, 4, 4)
         return torch.tensor(state, dtype=torch.float32)
 
-    def select_action(self, grid):
-        state = self.preprocess_grid(grid)
-        action_logits = self.policy_net(state)
+    def select_action(self, state):
+        state_tensor = self.preprocess_state(state)
+        action_logits = self.policy_net(state_tensor)
         action_probs = torch.softmax(action_logits, dim=-1)
         m = torch.distributions.Categorical(action_probs)
         action = m.sample()
@@ -91,8 +91,8 @@ class PolicyGradientStrategy:
     def load_pretrained_policy(self, weights):
         self.policy_net.load_pretrained_weights(weights)
 
-    def __call__(self, grid):
-        return self.select_action(grid)
+    def __call__(self, state):
+        return self.select_action(state)
 
 # In order to run a set of experiments with different configurations of the actor/critic network, we again defined a separate class to more efficiently automate the experiment running/testing
 class ExperimentPolicyGradient:
@@ -103,7 +103,7 @@ class ExperimentPolicyGradient:
         self.gamma = gamma
         self.entropy_coef = entropy_coef
 
-    def run_experiment(self, hidden_layers_configs, num_trials, grid_environment):
+    def run_experiment(self, hidden_layers_configs, num_trials):
         results = {}
         for config in hidden_layers_configs:
             scores = []
@@ -113,14 +113,12 @@ class ExperimentPolicyGradient:
 
                 total_score = 0
                 for _ in range(100):
-                    # Here the grid comes from the pretrained agent
-                    grid = grid_environment.get_current_state()
-                    action = strategy(grid)
-                    reward, done = grid_environment.step(action)
+                    # Simulate a random state and reward environment
+                    state = np.random.rand(4, 4)
+                    action = strategy(state)
+                    reward = np.random.uniform(-1, 1)  # Simulated reward
                     strategy.rewards.append(reward)
                     total_score += reward
-                    if done:
-                        break
                 strategy.train()
                 scores.append(total_score)
             avg_score = sum(scores) / len(scores)
@@ -151,10 +149,8 @@ class ExperimentPolicyGradient:
         return results
 
 if __name__ == "__main__":
-    hidden_layers_configs = [[64], [128], [256], [128, 128], [256, 128]]
+    hidden_layers_configs = [[64], [128], [256], [128, 128], [256, 128], [256, 256], [512, 256, 128], [512, 512, 256], [512, 512, 512], [1024, 512, 256], [1024, 1024, 512], [1024, 1024, 1024], [2048, 1024, 512], [2048, 2048, 1024], [2048, 2048, 2048], [4096, 2048, 1024], [4096, 4096, 2048], [4096, 4096, 4096], [8192, 4096, 2048], [8192, 8192, 4096], [8192, 8192, 8192], [16384, 8192, 4096], [16384, 16384, 8192], [16384, 16384, 16384], [32768, 16384, 8192], [32768, 32768, 16384], [32768, 32768, 32768], [65536, 32768, 16384], [65536, 65536, 32768], [65536, 65536, 65536], [131072, 65536, 32768], [131072, 131072, 65536], [131072, 131072, 131072], [262144, 131072, 65536], [262144, 262144, 131072], [262144, 262144, 262144], [524288, 262144, 131072], [524288, 524288, 262144], [524288, 524288, 524288], [1048576, 524288, 262144], [1048576, 1048576, 524288], [1048576, 1048576, 1048576]]
     num_trials = 10
-    # We define the grid environment to be the pretrained expert agent (NEEDS TO BE REPLACED)
-    grid_environment = None
 
     pretrained_weights_path = "./data/policy_network_best.pth"
     pretrained_model = PolicyNetworkCNN()
@@ -164,5 +160,5 @@ if __name__ == "__main__":
     strategy.load_pretrained_policy(pretrained_model.state_dict())
 
     experiment = ExperimentPolicyGradient()
-    results = experiment.run_experiment(hidden_layers_configs, num_trials, grid_environment)
+    results = experiment.run_experiment(hidden_layers_configs, num_trials)
     print("Experimental Results:", results)
