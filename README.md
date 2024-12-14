@@ -51,7 +51,7 @@ python algorithms/train_policy_network.py
 
 ## Acknowledgments
 
-This project was inspired by or builds upon work from the following repositories:
+This project was built from scratch as our own work, and initially inspired by work from the following repositories:
 
 - [Robert Xiao's 2048 AI](https://github.com/nneonneo/2048-ai): Provides the expectimax optimization algorithm used for expert gameplay.
 - [Anders Qiu's Python 2048](https://github.com/andersqiu/python-tk-2048): Offers a Python implementation of the 2048 game, which served as a base for this project.
